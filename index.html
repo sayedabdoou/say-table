@@ -5,108 +5,114 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SAY TABLE</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0a;color:#fff;font-family:sans-serif;padding:16px}
-h1{text-align:center;color:#d4af37;margin:12px 0;font-size:28px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:#1a1a1a;border:1px solid #333;border-radius:16px;padding:16px;text-align:center}
-.card button{background:#d4af37;color:#000;border:0;padding:10px 16px;border-radius:10px;font-weight:bold;width:100%;margin-top:8px}
-video{width:100%;border-radius:12px;display:none}
-#notes{display:grid;gap:10px;margin-top:20px}
-.note{background:#1e1e1e;border-right:4px solid #d4af37;padding:12px;border-radius:10px}
-.topbar{display:flex;gap:8px;margin:16px 0}
-.topbar input{flex:1;padding:12px;border-radius:10px;border:1px solid #333;background:#111;color:#fff}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui}
+body{background:#f5f5f5;padding:10px}
+.header{background:#111;color:#fff;padding:14px;border-radius:12px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:18px}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.btn{padding:8px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:13px}
+.btn.primary{background:#111;color:#fff}
+.btn.green{background:#22c55e;color:#fff;border-color:#22c55e}
+.hint{background:#fef08a;padding:8px;border-radius:8px;font-size:12px;text-align:center;margin:8px 0}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:center;min-width:80px;height:48px}
+th{background:#111;color:#fff;font-size:12px}
+th.rowh{background:#111}
+td{background:#fff;position:relative;cursor:pointer}
+td .label{position:absolute;top:2px;left:4px;font-size:10px;color:#888}
+td .plus{font-size:18px;color:#bbb}
+td.has{border:2px solid #22c55e}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:99;padding:16px}
+.modal.show{display:flex}
+.box{background:#fff;border-radius:16px;width:100%;max-width:420px;padding:16px}
+.types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.type{border:1px solid #e5e7eb;border-radius:10px;padding:8px;font-size:12px;text-align:center;cursor:pointer}
+.type.active{border-color:#22c55e;background:#dcfce7}
+input,textarea,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin:6px 0}
+.calc{background:#111;color:#fff;padding:10px;border-radius:8px;margin-top:12px;font-size:13px}
 </style>
 </head>
 <body>
-<h1>SAY TABLE</h1>
-
-<div class="topbar">
-<input id="noteInput" placeholder="اكتب الملاحظة...">
-<button onclick="addNote()" style="background:#d4af37;padding:12px 16px;border-radius:10px;border:0;font-weight:bold">+ إضافة</button>
+<div class="header"><h1>SAY TABLE SMART NOTES GRID</h1><span>EN</span></div>
+<div class="btns">
+<button class="btn" onclick="exportData()">Export JSON</button>
+<button class="btn green" onclick="document.getElementById('importFile').click()">Import JSON</button>
+<input type="file" id="importFile" hidden accept=".json" onchange="importData(event)">
+<button class="btn" onclick="changeRows(1)">+ صف</button>
+<button class="btn" onclick="changeRows(-1)">- صف</button>
+<button class="btn" onclick="changeCols(1)">+ عمود</button>
+<button class="btn" onclick="changeCols(-1)">- عمود</button>
+<button class="btn" onclick="clearAll()">Clear</button>
 </div>
+<div class="hint">ضغطة سريعة تفتح الخلية، ضغطة طويلة للسحب - وضع النقل: <input type="checkbox" id="moveMode"></div>
+<table id="grid"></table>
+<div class="calc" id="calc">الآلة الحاسبة: مجموع الأرقام = 0</div>
 
-<div class="grid">
-<div class="card">
-<h3>📷 كاميرا</h3>
-<video id="cam" autoplay playsinline></video>
-<button onclick="openCam()">فتح الكاميرا</button>
-<button onclick="takePhoto()">التقاط صورة</button>
-<canvas id="canvas" style="display:none"></canvas>
-</div>
-
-<div class="card">
-<h3>🎙️ صوت</h3>
-<p id="voiceStatus">جاهز</p>
-<button onclick="startVoice()">تسجيل صوتي</button>
-</div>
-
-<div class="card">
-<h3>⭐ مميزات</h3>
-<p>حفظ تلقائي<br>يعمل بدون نت</p>
-<button onclick="exportNotes()">تصدير الملاحظات</button>
-</div>
-
-<div class="card">
-<h3>🔗 QR</h3>
-<div id="qrBox" style="background:#fff;color:#000;padding:8px;border-radius:8px;font-size:10px;word-break:break-all">say-table.link</div>
-<button onclick="genQR()">تحديث الرابط</button>
+<div class="modal" id="modal">
+<div class="box">
+<h3 id="modalTitle">تعديل الخلية A1 - اختر النوع</h3>
+<div class="types" id="types"></div>
+<div id="fields"></div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="btn" style="flex:1" onclick="closeModal()">إلغاء</button>
+<button class="btn primary" style="flex:1" onclick="saveCell()">حفظ -> يظهر كل الأرقام مع النتائج</button>
 </div>
 </div>
-
-<div id="notes"></div>
+</div>
 
 <script>
-let stream=null;
-let notes=JSON.parse(localStorage.getItem('say_notes')||'[]');
+let rows=8, cols=5, data={}, curCell=null, curType='نص';
+const typeList=['نص','رقم','صورة','كاميرا','فيديو','حساب','صح/خطأ','QR','تاريخ','رابط'];
+const LS='say-table-clean';
+function load(){try{let s=localStorage.getItem(LS);if(s){let o=JSON.parse(s);rows=o.rows||8;cols=o.cols||5;data=o.data||{}}}catch{}}
+function save(){localStorage.setItem(LS,JSON.stringify({rows,cols,data}))}
+function colName(n){let s='';while(n>=0){s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26)-1}return s}
 function render(){
- let box=document.getElementById('notes');
- box.innerHTML=notes.map((n,i)=>`<div class=note><b>${i+1}.</b> ${n.text}<br><small>${n.date}</small><br><button onclick="delNote(${i})" style="margin-top:6px;background:#333;color:#fff;border:0;padding:6px 10px;border-radius:6px">حذف</button></div>`).join('');
+ let h='<tr><th class="rowh">#</th>';for(let c=0;c<cols;c++)h+=`<th>${colName(c)}</th>`;h+='</tr>';
+ for(let r=0;r<rows;r++){h+=`<tr><th class="rowh">${r+1}</th>`;for(let c=0;c<cols;c++){let k=`${r}-${c}`;let v=data[k];let has=v&&v.value?' has':'';let label=`${colName(c)}${r+1}`;let content=v&&v.value?`<div style="font-size:12px;word-break:break-all">${shortVal(v)}</div>`:`<span class="plus">+</span>`;h+=`<td class="${has}" onclick="openCell(${r},${c})"><span class="label">${label}</span>${content}</td>`}h+='</tr>'}
+ document.getElementById('grid').innerHTML=h;calcSum();
 }
-function addNote(t){
- let inp=document.getElementById('noteInput');
- let text=t||inp.value;
- if(!text)return;
- notes.unshift({text,date:new Date().toLocaleString('ar-EG')});
- localStorage.setItem('say_notes',JSON.stringify(notes));
- inp.value='';
- render();
+function shortVal(v){if(!v)return '';if(v.type==='صورة'&&v.value.startsWith('data:'))return '🖼️ صورة';if(v.type==='رقم')return v.value;return String(v.value).slice(0,20)}
+function openCell(r,c){
+ curCell=`${r}-${c}`;let existing=data[curCell];curType=existing?existing.type:'نص';
+ document.getElementById('modalTitle').innerText=`تعديل الخلية ${colName(c)}${r+1} - اختر النوع`;
+ document.getElementById('types').innerHTML=typeList.map(t=>`<div class="type ${t===curType?'active':''}" onclick="setType('${t}')">${t}</div>`).join('');
+ renderFields();
+ document.getElementById('modal').classList.add('show');
 }
-function delNote(i){notes.splice(i,1);localStorage.setItem('say_notes',JSON.stringify(notes));render();}
-async function openCam(){
- try{
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-  let v=document.getElementById('cam');
-  v.srcObject=stream; v.style.display='block';
- }catch(e){alert('الكاميرا مش متاحة: '+e)}
+function setType(t){curType=t;document.querySelectorAll('.type').forEach(el=>el.classList.toggle('active',el.innerText===t));renderFields()}
+function renderFields(){
+ let v=data[curCell]?data[curCell].value:'';let f=document.getElementById('fields');let html='';
+ if(curType==='نص')html=`<textarea id="val" rows="3" placeholder="اكتب نص">${v||''}</textarea>`;
+ else if(curType==='رقم')html=`<input id="val" type="number" value="${v||''}" placeholder="رقم">`;
+ else if(curType==='صورة')html=`<input id="val" type="file" accept="image/*" onchange="toBase64(this)"><div id="preview"></div><input type="hidden" id="valHidden" value="${v&&v.startsWith('data:')?v:''}">`;
+ else if(curType==='كاميرا')html=`<button class="btn primary" onclick="openCamera()">فتح الكاميرا</button><video id="vid" autoplay style="width:100%;display:none"></video><canvas id="can" style="display:none"></canvas><input type="hidden" id="valHidden" value="${v||''}">`;
+ else if(curType==='فيديو')html=`<input id="val" placeholder="رابط فيديو يوتيوب" value="${v||''}">`;
+ else if(curType==='حساب')html=`<input id="val" placeholder="مثال: =A1+B1 أو =A1*2" value="${v||''}"><small>اكتب =A1+B2</small>`;
+ else if(curType==='صح/خطأ')html=`<select id="val"><option ${v==='صح'?'selected':''}>صح</option><option ${v==='خطأ'?'selected':''}>خطأ</option></select>`;
+ else if(curType==='QR')html=`<input id="val" placeholder="نص لـ QR" value="${v||''}" oninput="drawQR(this.value)"><canvas id="qr"></canvas>`;
+ else if(curType==='تاريخ')html=`<input id="val" type="date" value="${v||''}">`;
+ else if(curType==='رابط')html=`<input id="val" placeholder="https://" value="${v||''}">`;
+ f.innerHTML=html;if(curType==='QR'&&v)drawQR(v);
 }
-function takePhoto(){
- let v=document.getElementById('cam');
- if(!v.srcObject)return alert('افتح الكاميرا أولا');
- let c=document.getElementById('canvas');
- c.width=v.videoWidth; c.height=v.videoHeight;
- c.getContext('2d').drawImage(v,0,0);
- let data=c.toDataURL('image/jpeg');
- addNote(`<img src="${data}" style="width:100%;border-radius:8px"> صورة من الكاميرا`);
+function toBase64(inp){let r=new FileReader();r.onload=e=>{document.getElementById('valHidden').value=e.target.result;document.getElementById('preview').innerHTML='<img src="'+e.target.result+'" style="width:100%;border-radius:8px">'};r.readAsDataURL(inp.files[0])}
+function openCamera(){let vid=document.getElementById('vid');vid.style.display='block';navigator.mediaDevices.getUserMedia({video:true}).then(s=>{vid.srcObject=s;vid.onclick=()=>{let c=document.getElementById('can');c.width=vid.videoWidth;c.height=vid.videoHeight;c.getContext('2d').drawImage(vid,0,0);let d=c.toDataURL('image/jpeg');document.getElementById('valHidden').value=d;vid.srcObject.getTracks().forEach(t=>t.stop());vid.style.display='none'}})}
+function drawQR(txt){let c=document.getElementById('qr');if(!c)return;let x=c.getContext('2d');c.width=120;c.height=120;x.fillStyle='#fff';x.fillRect(0,0,120,120);x.fillStyle='#000';x.font='10px monospace';x.fillText(txt.slice(0,18),4,60)}
+function saveCell(){
+ let valEl=document.getElementById('val');let hid=document.getElementById('valHidden');let val=hid?hid.value:(valEl?valEl.value:'');
+ if(curType==='حساب'&&val.startsWith('=')){try{val=evalFormula(val)}catch{val='خطأ'}}
+ if(val) data[curCell]={type:curType,value:val}; else delete data[curCell];
+ save();render();closeModal();
 }
-function startVoice(){
- let SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR)return alert('المتصفح لا يدعم التسجيل');
- let r=new SR(); r.lang='ar-EG';
- r.onstart=()=>document.getElementById('voiceStatus').textContent='...يسمع';
- r.onresult=(e)=>{addNote(e.results[0][0].transcript); document.getElementById('voiceStatus').textContent='تم الحفظ';};
- r.onerror=()=>document.getElementById('voiceStatus').textContent='خطأ';
- r.start();
-}
-function exportNotes(){
- let txt=notes.map(n=>n.text.replace(/<[^>]*>/g,'')).join('\n---\n');
- let blob=new Blob([txt],{type:'text/plain'});
- let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='say-table-notes.txt'; a.click();
-}
-function genQR(){
- document.getElementById('qrBox').textContent=location.href+'?v='+Date.now();
-}
-render();
+function evalFormula(f){let expr=f.slice(1).toUpperCase();expr=expr.replace(/([A-Z]+)([0-9]+)/g,(m,col,row)=>{let c=col.charCodeAt(0)-65;let r=parseInt(row)-1;let k=`${r}-${c}`;let d=data[k];let v=d?parseFloat(d.value):0;return isNaN(v)?0:v});return Function('"use strict";return ('+expr+')')()}
+function calcSum(){let s=0;Object.values(data).forEach(v=>{let n=parseFloat(v.value);if(!isNaN(n))s+=n});document.getElementById('calc').innerText='الآلة الحاسبة: مجموع الأرقام = '+s}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function changeRows(d){rows=Math.max(1,rows+d);save();render()}
+function changeCols(d){cols=Math.max(1,cols+d);save();render()}
+function clearAll(){if(confirm('مسح الكل؟')){data={};save();render()}}
+function exportData(){let b=new Blob([JSON.stringify({rows,cols,data})],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='say-table.json';a.click()}
+function importData(e){let f=e.target.files[0];let r=new FileReader();r.onload=ev=>{try{let o=JSON.parse(ev.target.result);rows=o.rows;cols=o.cols;data=o.data;save();render()}catch{alert('ملف خطأ')}};r.readAsText(f)}
+load();render();
 </script>
 </body>
 </html>
