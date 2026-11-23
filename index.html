@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAY TABLE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#fff;font-family:sans-serif;padding:16px}
+h1{text-align:center;color:#d4af37;margin:12px 0;font-size:28px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#1a1a1a;border:1px solid #333;border-radius:16px;padding:16px;text-align:center}
+.card button{background:#d4af37;color:#000;border:0;padding:10px 16px;border-radius:10px;font-weight:bold;width:100%;margin-top:8px}
+video{width:100%;border-radius:12px;display:none}
+#notes{display:grid;gap:10px;margin-top:20px}
+.note{background:#1e1e1e;border-right:4px solid #d4af37;padding:12px;border-radius:10px}
+.topbar{display:flex;gap:8px;margin:16px 0}
+.topbar input{flex:1;padding:12px;border-radius:10px;border:1px solid #333;background:#111;color:#fff}
+</style>
+</head>
+<body>
+<h1>SAY TABLE</h1>
+
+<div class="topbar">
+<input id="noteInput" placeholder="اكتب الملاحظة...">
+<button onclick="addNote()" style="background:#d4af37;padding:12px 16px;border-radius:10px;border:0;font-weight:bold">+ إضافة</button>
+</div>
+
+<div class="grid">
+<div class="card">
+<h3>📷 كاميرا</h3>
+<video id="cam" autoplay playsinline></video>
+<button onclick="openCam()">فتح الكاميرا</button>
+<button onclick="takePhoto()">التقاط صورة</button>
+<canvas id="canvas" style="display:none"></canvas>
+</div>
+
+<div class="card">
+<h3>🎙️ صوت</h3>
+<p id="voiceStatus">جاهز</p>
+<button onclick="startVoice()">تسجيل صوتي</button>
+</div>
+
+<div class="card">
+<h3>⭐ مميزات</h3>
+<p>حفظ تلقائي<br>يعمل بدون نت</p>
+<button onclick="exportNotes()">تصدير الملاحظات</button>
+</div>
+
+<div class="card">
+<h3>🔗 QR</h3>
+<div id="qrBox" style="background:#fff;color:#000;padding:8px;border-radius:8px;font-size:10px;word-break:break-all">say-table.link</div>
+<button onclick="genQR()">تحديث الرابط</button>
+</div>
+</div>
+
+<div id="notes"></div>
+
+<script>
+let stream=null;
+let notes=JSON.parse(localStorage.getItem('say_notes')||'[]');
+function render(){
+ let box=document.getElementById('notes');
+ box.innerHTML=notes.map((n,i)=>`<div class=note><b>${i+1}.</b> ${n.text}<br><small>${n.date}</small><br><button onclick="delNote(${i})" style="margin-top:6px;background:#333;color:#fff;border:0;padding:6px 10px;border-radius:6px">حذف</button></div>`).join('');
+}
+function addNote(t){
+ let inp=document.getElementById('noteInput');
+ let text=t||inp.value;
+ if(!text)return;
+ notes.unshift({text,date:new Date().toLocaleString('ar-EG')});
+ localStorage.setItem('say_notes',JSON.stringify(notes));
+ inp.value='';
+ render();
+}
+function delNote(i){notes.splice(i,1);localStorage.setItem('say_notes',JSON.stringify(notes));render();}
+async function openCam(){
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  let v=document.getElementById('cam');
+  v.srcObject=stream; v.style.display='block';
+ }catch(e){alert('الكاميرا مش متاحة: '+e)}
+}
+function takePhoto(){
+ let v=document.getElementById('cam');
+ if(!v.srcObject)return alert('افتح الكاميرا أولا');
+ let c=document.getElementById('canvas');
+ c.width=v.videoWidth; c.height=v.videoHeight;
+ c.getContext('2d').drawImage(v,0,0);
+ let data=c.toDataURL('image/jpeg');
+ addNote(`<img src="${data}" style="width:100%;border-radius:8px"> صورة من الكاميرا`);
+}
+function startVoice(){
+ let SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR)return alert('المتصفح لا يدعم التسجيل');
+ let r=new SR(); r.lang='ar-EG';
+ r.onstart=()=>document.getElementById('voiceStatus').textContent='...يسمع';
+ r.onresult=(e)=>{addNote(e.results[0][0].transcript); document.getElementById('voiceStatus').textContent='تم الحفظ';};
+ r.onerror=()=>document.getElementById('voiceStatus').textContent='خطأ';
+ r.start();
+}
+function exportNotes(){
+ let txt=notes.map(n=>n.text.replace(/<[^>]*>/g,'')).join('\n---\n');
+ let blob=new Blob([txt],{type:'text/plain'});
+ let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='say-table-notes.txt'; a.click();
+}
+function genQR(){
+ document.getElementById('qrBox').textContent=location.href+'?v='+Date.now();
+}
+render();
+</script>
+</body>
+</html>
