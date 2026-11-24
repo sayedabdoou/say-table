@@ -2,129 +2,437 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SAY TABLE ULTIMATE - 8 أعمدة</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>SAY TABLE - النسخة النهائية</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&display=swap');
-*{box-sizing:border-box}body{margin:0;font-family:Cairo,system-ui;background:#f8f7f5;color:#111}
-.wrap{max-width:1280px;margin:0 auto;padding:16px}
-.header{background:#111;color:#fff;border-radius:20px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
-.header h1{margin:0;font-size:22px}
-.badge{background:#22c55e;color:#000;font-weight:800;padding:4px 10px;border-radius:999px;font-size:12px}
-.tip{background:#facc15;border-radius:12px;padding:8px 12px;margin:12px 0;font-weight:700;font-size:12px}
-.grid-outer{background:#000;border-radius:22px;padding:10px;overflow:auto}
-.grid{display:grid;gap:2px;min-width:760px}
-.cell-h{background:#111;color:#fff;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;border-radius:8px}
-.cell{background:#fff;border-radius:10px;height:100px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700}
-.row-num{background:#111;color:#fff;border-radius:8px;height:100px;display:flex;align-items:center;justify-content:center;font-weight:800}
-.footer{text-align:center;margin:20px 0}
-.type{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
-.box{background:#fff;border-radius:20px;max-width:520px;width:100%;padding:16px}
-.types{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
-.types button{height:46px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:800}
-.types button.active{border:2px solid #000;background:#f5f5f5}
-input,textarea,select{width:100%;border:1px solid #ddd;border-radius:12px;padding:12px;font-family:inherit}
-button.main{background:#000;color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:800;cursor:pointer}
+:root{--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--border:#e2e8f0;--muted:#64748b}
+[data-theme=dark]{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--border:#334155;--muted:#94a3b8}
+[data-theme=beige]{--bg:#fef3c7;--card:#fffbeb;--text:#451a03;--border:#fcd34d;--muted:#92400e}
+[data-theme=blue]{--bg:#dbeafe;--card:#eff6ff;--text:#1e3a8a;--border:#93c5fd;--muted:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-system,system-ui,-apple-system,Segoe UI,Roboto,Tahoma,Arial,sans-serif;direction:rtl;line-height:1.5}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+header h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.5px}
+.header-actions{display:flex;gap:8px}
+.header-actions button{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-weight:700}
+#toolbar{position:sticky;top:58px;z-index:20;background:var(--card);border-bottom:1px solid var(--border);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+#toolbar button{border:0;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer;color:#fff;font-size:13px;transition:transform .1s}
+#toolbar button:active{transform:scale(.97)}
+.c-green{background:#16a34a}.c-blue{background:#2563eb}.c-red{background:#dc2626}.c-purple{background:#7c3aed}.c-cyan{background:#0891b2}.c-orange{background:#ea580c}.c-indigo{background:#4f46e5}.c-teal{background:#0d9488}.c-gray{background:#475569}
+#tableWrap{overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+table{border-collapse:separate;border-spacing:0;min-width:720px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+th,td{border:1px solid var(--border);padding:9px 10px;min-width:92px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+th{background:var(--bg);font-weight:800;position:sticky;top:0;z-index:2;text-align:center;color:var(--muted);font-size:12px}
+td{background:var(--card);cursor:pointer;text-align:center;transition:background .15s}
+td:hover{filter:brightness(.97)}
+tr[draggable=true]{cursor:grab}
+#stats{padding:8px 16px;color:var(--muted);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80;padding:16px}
+#modal[hidden]{display:none!important}
+.modal-card{background:var(--card);width:min(96vw,540px);border-radius:20px;padding:20px;border:1px solid var(--border);max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-card h3{margin:0 0 14px;font-size:18px;font-weight:900}
+.modal-card label{display:block;margin:12px 0 6px;font-weight:800;font-size:13px;color:var(--muted)}
+.modal-card input,.modal-card select,.modal-card textarea{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font-size:14px}
+.row2{display:flex;gap:10px}.row2>*{flex:1}
+video#camVideo{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3}
+canvas{max-width:100%}
+.small{font-size:11px;color:var(--muted);margin-top:4px}
+.preview-img{max-width:100%;max-height:160px;border-radius:10px;margin-top:8px;border:1px solid var(--border)}
+.btns{display:flex;gap:10px;margin-top:18px}
+.btns button{flex:1;padding:12px;border:0;border-radius:12px;font-weight:800;cursor:pointer;color:#fff;font-size:14px}
+#importFile{display:none}
+.qr-canvas{border:1px solid var(--border);border-radius:8px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="header"><h1>SAY TABLE</h1><span class="badge">ULTIMATE 8 COLS</span></div>
-  <div class="tip">نصيحة: الكاميرا تعمل مباشرة في Chrome. افتح في متصفح خارجي لو انت في واتساب. الضغط المطول = سحب وتبديل الخلايا.</div>
-  <div class="grid-outer"><div id="app"></div></div>
-  <div class="footer"><span style="background:#fff;border:1px solid #ddd;border-radius:999px;padding:6px 14px;font-weight:700;font-size:11px">SAY TABLE ULTIMATE • 8×8 • memory only • no localStorage</span></div>
+<header>
+<h1 id="appTitle">SAY TABLE</h1>
+<div class="header-actions">
+<button id="langBtn">EN</button>
+<button id="themeBtn">🌙 ثيم</button>
+</div>
+</header>
+<div id="toolbar">
+<button class="c-green" id="addRowBtn">+ صف</button>
+<button class="c-green" id="addColBtn">+ عمود</button>
+<button class="c-red" id="delRowBtn">حذف صف</button>
+<button class="c-red" id="delColBtn">حذف عمود</button>
+<button class="c-blue" id="expJsonBtn">JSON</button>
+<button class="c-blue" id="expCsvBtn">CSV</button>
+<button class="c-indigo" id="expXlsBtn">XLS</button>
+<button class="c-teal" id="expPdfBtn">PDF</button>
+<button class="c-purple" id="impBtn">استيراد</button>
+<button class="c-gray" id="clearBtn">مسح الكل</button>
+</div>
+<div id="stats"><span id="statRows"></span><span id="statCols"></span><span id="statLimit">الحد: 100x100 - السحب والإفلات مفعّل</span></div>
+<div id="tableWrap"><table id="mainTable"></table></div>
+<input type="file" id="importFile" accept=".json,.csv">
+<div id="modal" hidden>
+<div class="modal-card">
+<h3 id="mTitle">تحرير الخلية</h3>
+<label id="lType">النوع</label>
+<select id="mType">
+<option value="text">text - نص</option>
+<option value="number">number - رقم</option>
+<option value="image">image upload - رفع صورة</option>
+<option value="camera">camera - كاميرا مباشرة</option>
+<option value="video">video - فيديو</option>
+<option value="link">link - رابط</option>
+<option value="date">date - تاريخ</option>
+<option value="qr">qr canvas - كود QR</option>
+<option value="bool">bool - صح / خطأ</option>
+<option value="formula">formula - معادلة</option>
+</select>
+<label id="lValue">القيمة</label>
+<input id="mValue" type="text" placeholder="اكتب هنا">
+<input id="mValueNumber" type="number" style="display:none" placeholder="123">
+<input id="mValueDate" type="date" style="display:none">
+<div id="boolWrap" style="display:none;margin-top:8px"><label><input id="mBool" type="checkbox"> <span id="boolLabel">قيمة صحيحة</span></label></div>
+<div id="imageWrap" style="display:none"><input id="mImage" type="file" accept="image/*"><img id="imgPreview" class="preview-img" style="display:none"><div class="small">رفع صورة يحفظ كـ Base64</div></div>
+<div id="cameraWrap" style="display:none"><video id="camVideo" autoplay playsinline style="display:none"></video><canvas id="camCanvas" style="display:none"></canvas><div style="display:flex;gap:8px;margin-top:8px"><button id="camOpenBtn" type="button" class="c-blue" style="flex:1;padding:10px;border:0;border-radius:10px;color:#fff;font-weight:700">فتح الكاميرا getUserMedia</button><button id="camCapBtn" type="button" class="c-green" style="flex:1;padding:10px;border:0;border-radius:10px;color:#fff;font-weight:700;display:none">التقاط صورة</button></div><img id="camPreview" class="preview-img" style="display:none"></div>
+<div id="videoWrap" style="display:none"><input id="mVideo" type="text" placeholder="https:// ... .mp4 أو رابط يوتيوب"><div class="small">يدعم رابط فيديو مباشر</div></div>
+<div id="linkWrap" style="display:none"><input id="mLink" type="url" placeholder="https://example.com"></div>
+<div id="qrWrap" style="display:none"><input id="mQr" type="text" placeholder="نص لتوليد QR"><canvas id="qrPreview" width="160" height="160" class="qr-canvas" style="margin-top:8px"></canvas><div class="small" id="qrHint">سيتم توليد QR من النص باستخدام canvas</div></div>
+<div id="formulaWrap" style="display:none"><input id="mFormula" type="text" placeholder="=A1+B1 أو =A1*2"><div class="small">ادعم A1,B2... معادلات بسيطة مثل =A1+B1</div></div>
+<div class="row2"><div><label id="lTextColor">لون النص</label><input id="mColor" type="color" value="#0f172a"></div><div><label id="lBgColor">لون الخلفية</label><input id="mBg" type="color" value="#ffffff"></div></div>
+<div style="margin-top:10px"><label><input id="mBold" type="checkbox"> <span id="lBold">عريض Bold</span></label></div>
+<div class="btns"><button id="mSave" class="c-green">حفظ</button><button id="mCancel" class="c-red">إلغاء</button></div>
+</div>
 </div>
 <script>
-// SAY TABLE ULTIMATE - 8 columns final - memory only - single file
-const ROWS=8, COLS=8;
-const typeDefs={text:{ar:"نص"},number:{ar:"رقم"},image:{ar:"صورة"},camera:{ar:"كاميرا"},video:{ar:"فيديو"},link:{ar:"رابط"},date:{ar:"تاريخ"},qr:{ar:"QR"},boolean:{ar:"صح/خطأ"},calc:{ar:"حساب"}};
-let cells={};
-let editing=null,editType="text",editValue="";
-let dragSrc=null, dragging=false;
-const app=document.getElementById('app');
-function colLabel(i){return String.fromCharCode(65+i)}
-function render(){
-  app.className='grid';
-  app.style.gridTemplateColumns='52px repeat('+COLS+',1fr)';
-  let h='';
-  h+='<div class="cell-h">#</div>';
-  for(let c=0;c<COLS;c++) h+='<div class="cell-h">'+colLabel(c)+'</div>';
-  for(let r=0;r<ROWS;r++){
-    h+='<div class="row-num">'+(r+1)+'</div>';
-    for(let c=0;c<COLS;c++){
-      const key=r+'-'+c; const cell=cells[key];
-      if(!cell) h+='<div class="cell" onclick="openEdit('+r+','+c+')">+</div>';
-      else{
-        let inner='';
-        if(cell.type==='text') inner='<span style="padding:6px;overflow-wrap:anywhere">'+cell.value+'</span>';
-        else if(cell.type==='number') inner='<b>'+cell.value+'</b>';
-        else if(cell.type==='image'||cell.type==='camera') inner='<img src="'+cell.value+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';
-        else if(cell.type==='boolean') inner=(cell.value?'✅':'❌');
-        else if(cell.type==='calc') inner='<b>'+(cell.computed||0)+'</b>';
-        else if(cell.type==='link') inner='<a href="'+cell.value+'" target="_blank" style="font-size:10px;color:#2563eb;overflow-wrap:anywhere">'+cell.value+'</a>';
-        else if(cell.type==='date') inner=cell.value;
-        else if(cell.type==='video') inner='VIDEO ▶';
-        else if(cell.type==='qr') inner='QR:'+cell.value;
-        h+='<div class="cell" onclick="openEdit('+r+','+c+')" onmousedown="startDrag(event,'+r+','+c+')" ontouchstart="startDrag(event,'+r+','+c+')">'+inner+'</div>';
-      }
-    }
-  }
-  app.innerHTML=h;
+(function(){
+var T={
+ar:{appTitle:'SAY TABLE - النسخة النهائية',addRow:'+ صف',addCol:'+ عمود',delRow:'حذف صف',delCol:'حذف عمود',expJson:'JSON',expCsv:'CSV',expXls:'XLS',expPdf:'PDF',imp:'استيراد',clear:'مسح الكل',lang:'EN',theme:'🌙 ثيم',save:'حفظ',cancel:'إلغاء',cellTitle:'تحرير الخلية',type:'النوع',value:'القيمة',textColor:'لون النص',bgColor:'لون الخلفية',bold:'عريض Bold',delWarnRow:'هل أنت متأكد من حذف آخر صف؟',delWarnCol:'هل أنت متأكد من حذف آخر عمود؟',delWarnAll:'هل أنت متأكد من مسح كل البيانات؟ سيتم الحذف نهائيا',limit:'الحد: 100x100 - السحب والإفلات مفعّل',camera:'فتح الكاميرا getUserMedia',capture:'التقاط صورة',qrHint:'سيتم توليد QR من النص باستخدام canvas',boolTrue:'قيمة صحيحة',rows:'صفوف',cols:'أعمدة'},
+en:{appTitle:'SAY TABLE - Final',addRow:'+ Row',addCol:'+ Col',delRow:'Del Row',delCol:'Del Col',expJson:'JSON',expCsv:'CSV',expXls:'XLS',expPdf:'PDF',imp:'Import',clear:'Clear All',lang:'AR',theme:'Theme',save:'Save',cancel:'Cancel',cellTitle:'Edit Cell',type:'Type',value:'Value',textColor:'Text Color',bgColor:'BG Color',bold:'Bold',delWarnRow:'Delete last row?',delWarnCol:'Delete last column?',delWarnAll:'Clear all data? This cannot be undone',limit:'Limit: 100x100 - Drag drop enabled',camera:'Open Camera getUserMedia',capture:'Capture',qrHint:'QR will be generated from text using canvas',boolTrue:'True value',rows:'Rows',cols:'Cols'}
+};
+var lang='ar';
+var theme='light';
+var themes=['light','dark','beige','blue'];
+var themeIndex=0;
+var rows=10;
+var cols=6;
+var data=[];
+var selR=0, selC=0;
+var dragRow=null;
+var tempImg='';
+var camStream=null;
+var elTable=document.getElementById('mainTable');
+var elModal=document.getElementById('modal');
+var elMType=document.getElementById('mType');
+var elMValue=document.getElementById('mValue');
+var elMValueNumber=document.getElementById('mValueNumber');
+var elMValueDate=document.getElementById('mValueDate');
+var elBoolWrap=document.getElementById('boolWrap');
+var elMBool=document.getElementById('mBool');
+var elImageWrap=document.getElementById('imageWrap');
+var elMImage=document.getElementById('mImage');
+var elImgPreview=document.getElementById('imgPreview');
+var elCameraWrap=document.getElementById('cameraWrap');
+var elCamVideo=document.getElementById('camVideo');
+var elCamCanvas=document.getElementById('camCanvas');
+var elCamOpen=document.getElementById('camOpenBtn');
+var elCamCap=document.getElementById('camCapBtn');
+var elCamPreview=document.getElementById('camPreview');
+var elVideoWrap=document.getElementById('videoWrap');
+var elMVideo=document.getElementById('mVideo');
+var elLinkWrap=document.getElementById('linkWrap');
+var elMLink=document.getElementById('mLink');
+var elQrWrap=document.getElementById('qrWrap');
+var elMQr=document.getElementById('mQr');
+var elQrPreview=document.getElementById('qrPreview');
+var elFormulaWrap=document.getElementById('formulaWrap');
+var elMFormula=document.getElementById('mFormula');
+var elMColor=document.getElementById('mColor');
+var elMBg=document.getElementById('mBg');
+var elMBold=document.getElementById('mBold');
+
+function t(k){ var d=T[lang]||T.ar; return d[k]||k; }
+
+function initData(){ data=[]; for(var r=0;r<rows;r++){ var row=[]; for(var c=0;c<cols;c++){ row.push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } data.push(row); } }
+
+function load(){
+ try{
+  var s=localStorage.getItem('say_table_final_v1');
+  if(s){ var o=JSON.parse(s); rows=o.rows||10; cols=o.cols||6; data=o.data||[]; theme=o.theme||'light'; lang=o.lang||'ar'; themeIndex=themes.indexOf(theme); if(themeIndex<0) themeIndex=0; if(!data.length) initData(); }
+  else initData();
+ }catch(e){ initData(); }
 }
-function openEdit(r,c){
-  if(dragging) return;
-  editing={r,c}; const key=r+'-'+c; const ex=cells[key];
-  editType=ex?ex.type:'text'; editValue=ex?ex.value:'';
-  showModal();
-}
-let modalEl=null;
-function showModal(){
-  if(modalEl) modalEl.remove();
-  modalEl=document.createElement('div'); modalEl.className='type';
-  modalEl.innerHTML='<div class="box"><h3 style="margin:0 0 10px">تحرير الخلية '+colLabel(editing.c)+(editing.r+1)+'</h3><div class="types">'+Object.keys(typeDefs).map(k=>'<button class="'+(editType===k?'active':'')+'" onclick="setType(\''+k+'\')">'+typeDefs[k].ar+'</button>').join('')+'</div><div id="editArea"></div><div style="display:flex;justify-content:space-between;margin-top:12px"><button class="main" style="background:#eee;color:#111" onclick="clearCell()">مسح الخلية</button><div style="display:flex;gap:8px"><button class="main" style="background:#eee;color:#111" onclick="closeModal()">إلغاء</button><button class="main" onclick="save()">حفظ ✓</button></div></div></div>';
-  document.body.appendChild(modalEl);
-  renderEditArea();
-}
-function renderEditArea(){
-  const a=document.getElementById('editArea');
-  if(editType==='text') a.innerHTML='<textarea id="ev" rows="4" placeholder="اكتب نص...">'+editValue+'</textarea>';
-  else if(editType==='number') a.innerHTML='<input id="ev" type="number" value="'+editValue+'">';
-  else if(editType==='link') a.innerHTML='<input id="ev" type="url" value="'+editValue+'" placeholder="https://...">';
-  else if(editType==='date') a.innerHTML='<input id="ev" type="date" value="'+editValue+'">';
-  else if(editType==='boolean') a.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="main" style="height:70px;background:'+(editValue===true?'#dcfce7':'#fff')+';color:#111;border:1px solid #ddd" onclick="editValue=true;renderEditArea()">صح ✅</button><button class="main" style="height:70px;background:'+(editValue===false?'#fee2e2':'#fff')+';color:#111;border:1px solid #ddd" onclick="editValue=false;renderEditArea()">خطأ ❌</button></div>';
-  else if(editType==='calc') a.innerHTML='<input id="ev" value="'+editValue+'" placeholder="2*5+10"><div id="calcRes" style="margin-top:8px;background:#111;color:#fff;padding:8px 12px;border-radius:10px;font-weight:700"></div>';
-  else if(editType==='image'||editType==='camera') a.innerHTML='<input id="fileIn" type="file" accept="image/*" onchange="loadImg(event)"><div style="margin-top:8px">'+(editValue?'<img src="'+editValue+'" style="max-width:100%;max-height:180px;border-radius:10px">':'')+'</div><button class="main" style="margin-top:8px;background:#22c55e" onclick="openCamera()">📷 فتح الكاميرا</button><video id="vid" autoplay playsinline style="display:none;width:100%;margin-top:8px;border-radius:10px;background:#000"></video><canvas id="capCan" style="display:none"></canvas><div style="display:flex;gap:8px;margin-top:8px"><button class="main" id="snapBtn" style="display:none;background:#22c55e" onclick="snap()">التقاط</button><button class="main" id="stopBtn" style="display:none;background:#eee;color:#111" onclick="stopCam()">إيقاف</button></div>';
-  else a.innerHTML='<input id="ev" value="'+editValue+'" placeholder="قيمة">';
-  const ev=document.getElementById('ev');
-  if(ev) ev.oninput=e=>{editValue=e.target.value; if(editType==='calc'){try{let f=editValue.replace(/%/g,'*0.01'); document.getElementById('calcRes').innerText='= '+Function('return ('+f+')')();}catch{}}};
-}
-function setType(t){editType=t; editValue=''; renderEditArea(); const btns=document.querySelectorAll('.types button'); btns.forEach(b=>b.classList.remove('active'))}
-function closeModal(){if(modalEl) modalEl.remove(); modalEl=null; stopCam();}
+
 function save(){
-  const ev=document.getElementById('ev');
-  if(ev) editValue=ev.value;
-  if(editType==='boolean'){} // already
-  let computed=undefined;
-  if(editType==='calc'){try{let f=(editValue||'0').replace(/%/g,'*0.01'); computed=Function('return ('+f+')')();}catch{computed=0}}
-  const key=editing.r+'-'+editing.c;
-  if((editValue===''||editValue==null)&&editType!=='boolean'){delete cells[key];}else{cells[key]={type:editType,value:editValue,computed};}
-  closeModal(); render();
+ try{ localStorage.setItem('say_table_final_v1', JSON.stringify({rows:rows,cols:cols,data:data,theme:theme,lang:lang})); }catch(e){}
+ document.documentElement.setAttribute('data-theme',theme);
+ document.documentElement.lang=lang;
+ document.body.dir=lang==='ar'?'rtl':'ltr';
+ applyLang();
 }
-function clearCell(){const key=editing.r+'-'+editing.c; delete cells[key]; closeModal(); render();}
-let stream=null;
-async function openCamera(){
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-  const v=document.getElementById('vid'); v.style.display='block'; v.srcObject=stream;
-  document.getElementById('snapBtn').style.display='block'; document.getElementById('stopBtn').style.display='block';
-  }catch{alert('فشل الكاميرا - افتح في Chrome خارج واتساب')}
+
+function applyLang(){
+ document.getElementById('appTitle').textContent=t('appTitle');
+ document.getElementById('addRowBtn').textContent=t('addRow');
+ document.getElementById('addColBtn').textContent=t('addCol');
+ document.getElementById('delRowBtn').textContent=t('delRow');
+ document.getElementById('delColBtn').textContent=t('delCol');
+ document.getElementById('expJsonBtn').textContent=t('expJson');
+ document.getElementById('expCsvBtn').textContent=t('expCsv');
+ document.getElementById('expXlsBtn').textContent=t('expXls');
+ document.getElementById('expPdfBtn').textContent=t('expPdf');
+ document.getElementById('impBtn').textContent=t('imp');
+ document.getElementById('clearBtn').textContent=t('clear');
+ document.getElementById('langBtn').textContent=t('lang');
+ document.getElementById('themeBtn').textContent=t('theme');
+ document.getElementById('mTitle').textContent=t('cellTitle');
+ document.getElementById('lType').textContent=t('type');
+ document.getElementById('lValue').textContent=t('value');
+ document.getElementById('lTextColor').textContent=t('textColor');
+ document.getElementById('lBgColor').textContent=t('bgColor');
+ document.getElementById('lBold').textContent=t('bold');
+ document.getElementById('statLimit').textContent=t('limit');
+ document.getElementById('mSave').textContent=t('save');
+ document.getElementById('mCancel').textContent=t('cancel');
+ document.getElementById('boolLabel').textContent=t('boolTrue');
+ document.getElementById('qrHint').textContent=t('qrHint');
+ document.getElementById('camOpenBtn').textContent=t('camera');
+ document.getElementById('camCapBtn').textContent=t('capture');
+ document.getElementById('statRows').textContent=t('rows')+': '+rows;
+ document.getElementById('statCols').textContent=t('cols')+': '+cols;
 }
-function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null} const v=document.getElementById('vid'); if(v){v.style.display='none'} }
-function snap(){const v=document.getElementById('vid'); const c=document.getElementById('capCan'); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext('2d').drawImage(v,0,0); editValue=c.toDataURL('image/jpeg',0.8); stopCam(); renderEditArea();}
-function loadImg(e){const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{editValue=r.result; renderEditArea();}; r.readAsDataURL(f);}
-let pressTimer=null;
-function startDrag(e,r,c){pressTimer=setTimeout(()=>{dragSrc={r,c}; dragging=true; if(navigator.vibrate) navigator.vibrate(50);},500);}
-document.addEventListener('mouseup',()=>{clearTimeout(pressTimer); if(dragging){const el=document.elementFromPoint(event.clientX,event.clientY); /* swap logic simplified - click target handled via second click */} dragging=false; dragSrc=null;});
-render();
+
+function getColName(n){ var s=''; while(n>=0){ s=String.fromCharCode(65+n%26)+s; n=Math.floor(n/26)-1; } return s; }
+
+function evalFormula(f){
+ if(!f) return '';
+ if(f[0]!=='=') return f;
+ var expr=f.slice(1);
+ expr=expr.replace(/[A-Z]+[0-9]+/g, function(ref){
+  var m=ref.match(/([A-Z]+)([0-9]+)/);
+  if(!m) return '0';
+  var colStr=m[1], rowStr=m[2];
+  var cNum=0;
+  for(var i=0;i<colStr.length;i++){ cNum=cNum*26+(colStr.charCodeAt(i)-64); }
+  cNum=cNum-1;
+  var rNum=parseInt(rowStr,10)-1;
+  if(rNum>=0 && rNum<rows && cNum>=0 && cNum<cols){
+   var v=data[rNum][cNum].v;
+   if(data[rNum][cNum].type==='formula'){ v=evalFormula(v); }
+   var num=parseFloat(v);
+   return isNaN(num)?'0':num.toString();
+  }
+  return '0';
+ });
+ try{ var res=Function('return ('+expr+')')(); return res; }catch(e){ return '#ERR'; }
+}
+
+function renderTable(){
+ elTable.innerHTML='';
+ var tr=document.createElement('tr');
+ var th0=document.createElement('th'); th0.textContent='#'; tr.appendChild(th0);
+ for(var c=0;c<cols;c++){ var th=document.createElement('th'); th.textContent=getColName(c); tr.appendChild(th); }
+ elTable.appendChild(tr);
+ for(var r=0;r<rows;r++){
+  tr=document.createElement('tr'); tr.draggable=true; tr.setAttribute('data-row', r);
+  var th=document.createElement('th'); th.textContent=(r+1); tr.appendChild(th);
+  for(var cc=0;cc<cols;cc++){
+   var td=document.createElement('td');
+   var cell=data[r][cc];
+   td.style.color=cell.color;
+   td.style.background=cell.bg;
+   if(cell.bold) td.style.fontWeight='bold';
+   var inner='';
+   if(cell.type==='text'){ inner=cell.v?cell.v.replace(/</g,'&lt;'):''; }
+   else if(cell.type==='number'){ inner=cell.v; }
+   else if(cell.type==='image'){ if(cell.v) inner='<img src="'+cell.v+'" style="max-width:90px;max-height:60px;border-radius:6px">'; }
+   else if(cell.type==='camera'){ if(cell.v) inner='<img src="'+cell.v+'" style="max-width:90px;max-height:60px;border-radius:6px">'; else inner='📷'; }
+   else if(cell.type==='video'){ if(cell.v) { if(cell.v.indexOf('youtube')>-1 || cell.v.indexOf('youtu.be')>-1) inner='<span style="color:#2563eb">▶ يوتيوب</span>'; else inner='<video src="'+cell.v+'" style="max-width:90px;max-height:60px" muted></video>'; } }
+   else if(cell.type==='link'){ if(cell.v) inner='<a href="'+cell.v+'" target="_blank" style="color:#2563eb;text-decoration:underline">'+cell.v.substring(0,18)+'</a>'; }
+   else if(cell.type==='date'){ inner=cell.v; }
+   else if(cell.type==='bool'){ inner=cell.v==='true' || cell.v===true ? '✓' : '✗'; }
+   else if(cell.type==='qr'){ if(cell.v) inner='<canvas class="qr-mini" data-val="'+cell.v.replace(/"/g,'&quot;')+'" width="60" height="60" style="border:1px solid #e2e8f0;border-radius:6px"></canvas>'; else inner='QR'; }
+   else if(cell.type==='formula'){ var ev=evalFormula(cell.v); inner='<span style="font-family:monospace">'+(cell.v||'')+' = '+(ev!==undefined?ev:'')+'</span>'; }
+   else { inner=cell.v||''; }
+   td.innerHTML=inner||'<span style="opacity:.3">-</span>';
+   (function(rr,cc2){ td.addEventListener('click', function(){ openModal(rr,cc2); }); })(r,cc);
+   tr.appendChild(td);
+  }
+  elTable.appendChild(tr);
+ }
+ // render mini QR
+ var cvs=document.querySelectorAll('canvas.qr-mini');
+ for(var i=0;i<cvs.length;i++){ var cv=cvs[i]; var val=cv.getAttribute('data-val')||''; var ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.fillStyle='#000'; for(var k=0;k<val.length;k++){ var x=(val.charCodeAt(k)*7)%(cv.width-6); var y=(k*9)%(cv.height-6); ctx.fillRect(x,y,5,5); } }
+ document.getElementById('statRows').textContent=t('rows')+': '+rows;
+ document.getElementById('statCols').textContent=t('cols')+': '+cols;
+ save();
+}
+
+function addRow(){ if(rows>=100){ alert(t('limit')); return; } var newRow=[]; for(var c=0;c<cols;c++){ newRow.push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } data.push(newRow); rows++; renderTable(); }
+function addCol(){ if(cols>=100){ alert(t('limit')); return; } for(var r=0;r<rows;r++){ data[r].push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } cols++; renderTable(); }
+function delRow(){ if(rows<=1){ alert(t('delWarnRow')); return; } if(!confirm(t('delWarnRow'))) return; data.pop(); rows--; renderTable(); }
+function delCol(){ if(cols<=1){ alert(t('delWarnCol')); return; } if(!confirm(t('delWarnCol'))) return; for(var r=0;r<rows;r++){ data[r].pop(); } cols--; renderTable(); }
+function clearAll(){ if(!confirm(t('delWarnAll'))) return; rows=10; cols=6; initData(); renderTable(); }
+
+function downloadBlob(blob, name){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 500); }
+
+function exportJSON(){ var blob=new Blob([JSON.stringify({rows:rows,cols:cols,data:data}, null, 2)], {type:'application/json'}); downloadBlob(blob, 'say-table.json'); }
+function exportCSV(){
+ var csv='';
+ for(var r=0;r<rows;r++){ var line=[]; for(var c=0;c<cols;c++){ var v=data[r][c].v||''; v=v.toString().replace(/"/g,'""'); if(v.indexOf(',')>-1 || v.indexOf('"')>-1 || v.indexOf('\n')>-1) v='"'+v+'"'; line.push(v); } csv+=line.join(',')+'\n'; }
+ var blob=new Blob([csv], {type:'text/csv;charset=utf-8;'}); downloadBlob(blob, 'say-table.csv');
+}
+function exportXLS(){
+ var html='<html><head><meta charset="UTF-8"></head><body><table border="1">';
+ for(var r=0;r<rows;r++){ html+='<tr>'; for(var c=0;c<cols;c++){ var cell=data[r][c]; var v=(cell.v||'').toString().replace(/</g,'&lt;'); html+='<td style="background:'+cell.bg+';color:'+cell.color+'">'+v+'</td>'; } html+='</tr>'; }
+ html+='</table></body></html>';
+ var blob=new Blob([html], {type:'application/vnd.ms-excel'}); downloadBlob(blob, 'say-table.xls');
+}
+function exportPDF(){
+ var html='<html><head><meta charset="UTF-8"><title>SAY TABLE PDF</title><style>table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:6px}</style></head><body><h2>SAY TABLE - '+new Date().toLocaleDateString()+'</h2><table>';
+ for(var r=0;r<rows;r++){ html+='<tr>'; for(var c=0;c<cols;c++){ var cell=data[r][c]; var v=(cell.v||'').toString().replace(/</g,'&lt;'); if(cell.type==='formula'){ v=v+' = '+evalFormula(v); } html+='<td>'+v+'</td>'; } html+='</tr>'; }
+ html+='</table><script>window.onload=function(){window.print();}<\/script></body></html>';
+ var blob=new Blob([html], {type:'application/pdf'});
+ downloadBlob(blob, 'say-table.pdf');
+ // also open print
+ var w=window.open('', '_blank'); if(w){ w.document.write(html); w.document.close(); }
+}
+
+function importData(e){
+ var file=e.target.files[0]; if(!file) return;
+ var reader=new FileReader();
+ reader.onload=function(ev){
+  try{
+   var txt=ev.target.result;
+   if(file.name.endsWith('.json')){
+    var o=JSON.parse(txt); if(o.data){ rows=o.rows||o.data.length; cols=o.cols||o.data[0].length; data=o.data; if(rows>100) rows=100; if(cols>100) cols=100; renderTable(); }
+   } else {
+    // csv simple
+    var lines=txt.split('\n'); var newData=[]; for(var i=0;i<lines.length;i++){ if(!lines[i].trim()) continue; var cells=lines[i].split(','); var row=[]; for(var j=0;j<cells.length;j++){ row.push({v:cells[j].replace(/^"|"$/g,'').replace(/""/g,'"'),type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } newData.push(row); }
+    if(newData.length){ rows=newData.length; cols=newData[0].length; data=newData; renderTable(); }
+   }
+  }catch(err){ alert('Import error: '+err.message); }
+ };
+ if(file.name.endsWith('.json')) reader.readAsText(file); else reader.readAsText(file);
+ e.target.value='';
+}
+
+function openModal(r,c){
+ selR=r; selC=c;
+ var cell=data[r][c];
+ elMType.value=cell.type;
+ elMColor.value=cell.color||'#0f172a';
+ elMBg.value=cell.bg||'#ffffff';
+ elMBold.checked=!!cell.bold;
+ tempImg=cell.v||'';
+ updateModalType();
+ // fill values
+ if(cell.type==='text') elMValue.value=cell.v||'';
+ else if(cell.type==='number') elMValueNumber.value=cell.v||'';
+ else if(cell.type==='date') elMValueDate.value=cell.v||'';
+ else if(cell.type==='bool') elMBool.checked=(cell.v==='true' || cell.v===true);
+ else if(cell.type==='image'){ if(cell.v){ elImgPreview.src=cell.v; elImgPreview.style.display='block'; } else elImgPreview.style.display='none'; }
+ else if(cell.type==='camera'){ if(cell.v){ elCamPreview.src=cell.v; elCamPreview.style.display='block'; } else elCamPreview.style.display='none'; }
+ else if(cell.type==='video') elMVideo.value=cell.v||'';
+ else if(cell.type==='link') elMLink.value=cell.v||'';
+ else if(cell.type==='qr'){ elMQr.value=cell.v||''; drawQr(elMQr.value); }
+ else if(cell.type==='formula') elMFormula.value=cell.v||'';
+ if(cell.type!=='text' && cell.type!=='number' && cell.type!=='date' && cell.type!=='image' && cell.type!=='camera' && cell.type!=='video' && cell.type!=='link' && cell.type!=='qr' && cell.type!=='bool' && cell.type!=='formula'){ elMValue.value=cell.v||''; }
+ elModal.hidden=false;
+}
+
+function closeModal(){
+ elModal.hidden=true;
+ stopCamera();
+}
+
+function stopCamera(){ if(camStream){ camStream.getTracks().forEach(function(tr){ tr.stop(); }); camStream=null; } elCamVideo.style.display='none'; elCamCap.style.display='none'; elCamVideo.srcObject=null; }
+
+function updateModalType(){
+ var type=elMType.value;
+ elMValue.style.display=type==='text'?'block':'none';
+ elMValueNumber.style.display=type==='number'?'block':'none';
+ elMValueDate.style.display=type==='date'?'block':'none';
+ elBoolWrap.style.display=type==='bool'?'block':'none';
+ elImageWrap.style.display=type==='image'?'block':'none';
+ elCameraWrap.style.display=type==='camera'?'block':'none';
+ elVideoWrap.style.display=type==='video'?'block':'none';
+ elLinkWrap.style.display=type==='link'?'block':'none';
+ elQrWrap.style.display=type==='qr'?'block':'none';
+ elFormulaWrap.style.display=type==='formula'?'block':'none';
+}
+
+function drawQr(text){
+ var canvas=elQrPreview;
+ var ctx=canvas.getContext('2d');
+ ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+ if(!text){ ctx.fillStyle='#64748b'; ctx.font='12px sans-serif'; ctx.fillText('QR Preview', 40, 80); return; }
+ ctx.fillStyle='#000';
+ // simple pattern: generate 16x16 grid from hash
+ for(var i=0;i<16;i++){ for(var j=0;j<16;j++){ var idx=i*16+j; var code=text.charCodeAt(idx%text.length)||0; if((code+i+j)%3===0){ ctx.fillRect(j*10, i*10, 8, 8); } } }
+ // border
+ ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.strokeRect(0,0,160,160);
+}
+
+function saveModal(){
+ var cell=data[selR][selC];
+ var type=elMType.value;
+ cell.type=type;
+ cell.color=elMColor.value;
+ cell.bg=elMBg.value;
+ cell.bold=elMBold.checked;
+ if(type==='text') cell.v=elMValue.value;
+ else if(type==='number') cell.v=elMValueNumber.value;
+ else if(type==='date') cell.v=elMValueDate.value;
+ else if(type==='bool') cell.v=elMBool.checked ? 'true' : 'false';
+ else if(type==='image') cell.v=tempImg;
+ else if(type==='camera') cell.v=tempImg;
+ else if(type==='video') cell.v=elMVideo.value;
+ else if(type==='link') cell.v=elMLink.value;
+ else if(type==='qr') cell.v=elMQr.value;
+ else if(type==='formula') cell.v=elMFormula.value;
+ else cell.v=elMValue.value;
+ closeModal();
+ renderTable();
+}
+
+// events
+document.getElementById('addRowBtn').addEventListener('click', addRow);
+document.getElementById('addColBtn').addEventListener('click', addCol);
+document.getElementById('delRowBtn').addEventListener('click', delRow);
+document.getElementById('delColBtn').addEventListener('click', delCol);
+document.getElementById('clearBtn').addEventListener('click', clearAll);
+document.getElementById('expJsonBtn').addEventListener('click', exportJSON);
+document.getElementById('expCsvBtn').addEventListener('click', exportCSV);
+document.getElementById('expXlsBtn').addEventListener('click', exportXLS);
+document.getElementById('expPdfBtn').addEventListener('click', exportPDF);
+document.getElementById('impBtn').addEventListener('click', function(){ document.getElementById('importFile').click(); });
+document.getElementById('importFile').addEventListener('change', importData);
+document.getElementById('langBtn').addEventListener('click', function(){ lang=lang==='ar'?'en':'ar'; save(); renderTable(); });
+document.getElementById('themeBtn').addEventListener('click', function(){ themeIndex=(themeIndex+1)%themes.length; theme=themes[themeIndex]; save(); renderTable(); });
+elMType.addEventListener('change', updateModalType);
+document.getElementById('mSave').addEventListener('click', saveModal);
+document.getElementById('mCancel').addEventListener('click', closeModal);
+elModal.addEventListener('click', function(e){ if(e.target===elModal) closeModal(); });
+elMImage.addEventListener('change', function(e){
+ var file=e.target.files[0]; if(!file) return;
+ var reader=new FileReader(); reader.onload=function(ev){ tempImg=ev.target.result; elImgPreview.src=tempImg; elImgPreview.style.display='block'; }; reader.readAsDataURL(file);
+});
+elCamOpen.addEventListener('click', function(){
+ if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ alert('Camera not supported'); return; }
+ navigator.mediaDevices.getUserMedia({video:true}).then(function(s){ camStream=s; elCamVideo.srcObject=s; elCamVideo.style.display='block'; elCamCap.style.display='block'; }).catch(function(err){ alert('Camera error: '+err.message); });
+});
+elCamCap.addEventListener('click', function(){
+ var canvas=elCamCanvas; canvas.width=elCamVideo.videoWidth||640; canvas.height=elCamVideo.videoHeight||480;
+ var ctx=canvas.getContext('2d'); ctx.drawImage(elCamVideo,0,0,canvas.width,canvas.height);
+ tempImg=canvas.toDataURL('image/jpeg', 0.8);
+ elCamPreview.src=tempImg; elCamPreview.style.display='block';
+});
+elMQr.addEventListener('input', function(){ drawQr(this.value); tempImg=this.value; });
+
+// drag drop
+elTable.addEventListener('dragstart', function(e){ var tr=e.target.closest('tr'); if(tr && tr.getAttribute('data-row')!==null){ dragRow=parseInt(tr.getAttribute('data-row')); e.dataTransfer.effectAllowed='move'; } });
+elTable.addEventListener('dragover', function(e){ e.preventDefault(); });
+elTable.addEventListener('drop', function(e){ e.preventDefault(); var tr=e.target.closest('tr'); if(tr && dragRow!==null){ var target=parseInt(tr.getAttribute('data-row')); if(!isNaN(target) && target!==dragRow){ var rowData=data.splice(dragRow,1)[0]; data.splice(target,0,rowData); renderTable(); } dragRow=null; } });
+
+load();
+renderTable();
+})();
 </script>
 </body>
 </html>
