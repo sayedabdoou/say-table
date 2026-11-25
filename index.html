@@ -100,6 +100,11 @@ background:var(--primary);
 color:white;
 }
 
+.btn-orange{
+background:var(--warning);
+color:white;
+}
+
 #searchBox{
 
 padding:10px;
@@ -183,13 +188,79 @@ background:#334155;
 
 }
 
+.rating{
+color:#facc15;
+font-size:18px;
+}
+
+.true{
+color:#10b981;
+font-size:20px;
+}
+
+.false{
+color:#ef4444;
+font-size:20px;
+}
+
+.modal{
+
+position:fixed;
+
+inset:0;
+
+background:rgba(0,0,0,.5);
+
+display:none;
+
+justify-content:center;
+
+align-items:center;
+
+}
+
+.modal-content{
+
+width:400px;
+
+background:#1e293b;
+
+padding:20px;
+
+border-radius:15px;
+
+}
+
+.modal-content input,
+.modal-content select{
+
+width:100%;
+
+padding:10px;
+
+margin-top:10px;
+
+}
+
 </style>
 </head>
+
 <body>
 
 <header>
-<div class="logo">SAY TABLE PRO</div>
-<div>🔥 Build 001</div>
+
+<div class="logo">
+
+SAY TABLE PRO
+
+</div>
+
+<div>
+
+🔥 Build 001
+
+</div>
+
 </header>
 
 <div class="toolbar">
@@ -210,6 +281,14 @@ background:#334155;
 🗑 عمود
 </button>
 
+<button class="btn-blue">
+📥 استيراد
+</button>
+
+<button class="btn-blue">
+📤 تصدير
+</button>
+
 <input
 type="text"
 id="searchBox"
@@ -219,12 +298,288 @@ placeholder="🔍 بحث..."
 </div>
 
 <div class="table-wrap">
+
 <table id="table"></table>
+
+</div>
+
+<div id="editor" class="modal">
+
+<div class="modal-content">
+
+<h3>تحرير الخلية</h3>
+
+<select id="cellType">
+
+<option value="text">📄 نص</option>
+
+<option value="number">🔢 رقم</option>
+
+<option value="date">📅 تاريخ</option>
+
+<option value="rating">⭐ تقييم</option>
+
+<option value="boolean">✅❌ صح او خطأ</option>
+
+<option value="calculator">🧮 حاسبة</option>
+
+</select>
+
+<input
+type="text"
+id="cellValue"
+placeholder="القيمة"
+>
+
+<button
+class="btn-green"
+id="saveCell"
+style="width:100%;margin-top:10px;"
+>
+حفظ
+</button>
+
+</div>
+
 </div>
 
 <script>
 
-// سيتم هنا وضع JavaScript الخاص بالجدول
+let rows=10;
+let cols=5;
+
+let selectedRow=0;
+let selectedCol=0;
+
+let data=[];
+
+function init(){
+
+data=[];
+
+for(let r=0;r<rows;r++){
+
+let row=[];
+
+for(let c=0;c<cols;c++){
+
+row.push({
+
+type:'text',
+
+value:''
+
+});
+
+}
+
+data.push(row);
+
+}
+
+render();
+
+}
+
+function render(){
+
+const table=document.getElementById('table');
+
+table.innerHTML='';
+
+let head='<tr><th>#</th>';
+
+for(let c=0;c<cols;c++){
+
+head+=`<th>${String.fromCharCode(65+c)}</th>`;
+
+}
+
+head+='</tr>';
+
+table.innerHTML+=head;
+
+for(let r=0;r<rows;r++){
+
+let tr=`<tr><th>${r+1}</th>`;
+
+for(let c=0;c<cols;c++){
+
+let cell=data[r][c];
+
+let display='';
+
+if(cell.type==='rating'){
+
+display='⭐'.repeat(cell.value||0);
+
+}
+
+else if(cell.type==='boolean'){
+
+display=cell.value==='true'
+?'✅'
+:'❌';
+
+}
+
+else if(cell.type==='calculator'){
+
+display=cell.value;
+
+}
+
+else{
+
+display=cell.value;
+
+}
+
+tr+=`
+<td onclick="editCell(${r},${c})">
+${display}
+</td>
+`;
+
+}
+
+tr+='</tr>';
+
+table.innerHTML+=tr;
+
+}
+
+localStorage.setItem(
+'say-table-pro',
+JSON.stringify(data)
+);
+
+}
+
+function editCell(r,c){
+
+selectedRow=r;
+selectedCol=c;
+
+document.getElementById('editor').style.display='flex';
+
+let cell=data[r][c];
+
+document.getElementById('cellType').value=cell.type;
+
+document.getElementById('cellValue').value=cell.value;
+
+}
+
+document.getElementById('saveCell')
+.addEventListener('click',()=>{
+
+let type=
+document.getElementById('cellType').value;
+
+let value=
+document.getElementById('cellValue').value;
+
+if(type==='calculator'){
+
+try{
+
+const result=eval(value);
+
+value=value+' = '+result;
+
+}
+catch{
+
+value='خطأ';
+
+}
+
+}
+
+data[selectedRow][selectedCol]={
+
+type,
+value
+
+};
+
+render();
+
+document.getElementById('editor')
+.style.display='none';
+
+});
+
+document.getElementById('addRowBtn')
+.addEventListener('click',()=>{
+
+rows++;
+
+data.push(
+Array(cols)
+.fill()
+.map(()=>({
+type:'text',
+value:''
+}))
+);
+
+render();
+
+});
+
+document.getElementById('addColBtn')
+.addEventListener('click',()=>{
+
+cols++;
+
+data.forEach(row=>{
+
+row.push({
+type:'text',
+value:''
+});
+
+});
+
+render();
+
+});
+
+document.getElementById('removeRowBtn')
+.addEventListener('click',()=>{
+
+if(rows>1){
+
+rows--;
+
+data.pop();
+
+render();
+
+}
+
+});
+
+document.getElementById('removeColBtn')
+.addEventListener('click',()=>{
+
+if(cols>1){
+
+cols--;
+
+data.forEach(
+row=>row.pop()
+);
+
+render();
+
+}
+
+});
+
+init();
 
 </script>
 
