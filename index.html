@@ -1,155 +1,289 @@
-SAY TABLE100×100حفظجديدتصدير JSONCSVاستيرادحذف الكل
-فاتحداكنورقيEN / عربي
-اضغط على أي خلية للتعديل - اسحب الصفوف لنقلها - الحفظ تلقائي في المتصفح•0 خلية ممتلئة•تم الحفظ
-SAY TABLE vFinal — Single File — 100×100 — Drag Drop — 10 Types — LocalStorage
-تحرير الخليةإغلاق ✕
-الخلية: A1
-القيمة
-لون الخلفية
-ملاحظة
-حذف الخلية
-إلغاءتطبيق
-const ROWS=100,COLS=100,STORAGE_KEY='say_table_final_v1';
-const TYPE_LIST=[
-  {id:'text',ar:'نص',en:'Text'},{id:'number',ar:'رقم',en:'Number'},{id:'date',ar:'تاريخ',en:'Date'},{id:'select',ar:'قائمة',en:'Select'},{id:'checkbox',ar:'اختيار',en:'Check'},{id:'link',ar:'رابط',en:'Link'},{id:'image',ar:'صورة',en:'Image'},{id:'color',ar:'لون',en:'Color'},{id:'textarea',ar:'فقرة',en:'Para'},{id:'formula',ar:'معادلة',en:'Formula'}
-];
-let data={};
-let lang='ar';
-let currentCell=null;
-const t=(ar,en)=> lang==='ar'?ar:en;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>SAY TABLE - النسخة النهائية</title>
+<style>
+:root{--bg:#f8fafc;--card:#ffffff;--text:#0f172a;--border:#e2e8f0;--muted:#64748b}
+[data-theme=dark]{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--border:#334155;--muted:#94a3b8}
+[data-theme=beige]{--bg:#fef3c7;--card:#fffbeb;--text:#451a03;--border:#fcd34d;--muted:#92400e}
+[data-theme=blue]{--bg:#dbeafe;--card:#eff6ff;--text:#1e3a8a;--border:#93c5fd;--muted:#3b82f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-system,system-ui,-apple-system,Segoe UI,Roboto,Tahoma,Arial,sans-serif;direction:rtl;line-height:1.5}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30}
+header h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.5px}
+.header-actions{display:flex;gap:8px}
+.header-actions button{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-weight:700}
+#toolbar{position:sticky;top:58px;z-index:20;background:var(--card);border-bottom:1px solid var(--border);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+#toolbar button{border:0;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer;color:#fff;font-size:13px;transition:transform .1s}
+#toolbar button:active{transform:scale(.97)}
+.c-green{background:#16a34a}.c-blue{background:#2563eb}.c-red{background:#dc2626}.c-purple{background:#7c3aed}.c-cyan{background:#0891b2}.c-orange{background:#ea580c}.c-indigo{background:#4f46e5}.c-teal{background:#0d9488}.c-gray{background:#475569}
+#tableWrap{overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+table{border-collapse:separate;border-spacing:0;min-width:720px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+th,td{border:1px solid var(--border);padding:9px 10px;min-width:92px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+th{background:var(--bg);font-weight:800;position:sticky;top:0;z-index:2;text-align:center;color:var(--muted);font-size:12px}
+td{background:var(--card);cursor:pointer;text-align:center;transition:background .15s}
+td:hover{filter:brightness(.97)}
+tr[draggable=true]{cursor:grab}
+#stats{padding:8px 16px;color:var(--muted);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80;padding:16px}
+#modal[hidden]{display:none!important}
+.modal-card{background:var(--card);width:min(96vw,540px);border-radius:20px;padding:20px;border:1px solid var(--border);max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-card h3{margin:0 0 14px;font-size:18px;font-weight:900}
+.modal-card label{display:block;margin:12px 0 6px;font-weight:800;font-size:13px;color:var(--muted)}
+.modal-card input,.modal-card select,.modal-card textarea{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font-size:14px}
+.row2{display:flex;gap:10px}.row2>*{flex:1}
+video#camVideo{width:100%;border-radius:12px;background:#000;aspect-ratio:4/3}
+canvas{max-width:100%}
+.small{font-size:11px;color:var(--muted);margin-top:4px}
+.preview-img{max-width:100%;max-height:160px;border-radius:10px;margin-top:8px;border:1px solid var(--border)}
+.btns{display:flex;gap:10px;margin-top:18px}
+.btns button{flex:1;padding:12px;border:0;border-radius:12px;font-weight:800;cursor:pointer;color:#fff;font-size:14px}
+#importFile{display:none}
+.qr-canvas{border:1px solid var(--border);border-radius:8px}
+</style>
+</head>
+<body>
+<header>
+<h1 id="appTitle">SAY TABLE</h1>
+<div class="header-actions">
+<button id="langBtn">EN</button>
+<button id="themeBtn">🌙 ثيم</button>
+</div>
+</header>
+<div id="toolbar">
+<button class="c-green" id="addRowBtn">+ صف</button>
+<button class="c-green" id="addColBtn">+ عمود</button>
+<button class="c-red" id="delRowBtn">حذف صف</button>
+<button class="c-red" id="delColBtn">حذف عمود</button>
+<button class="c-blue" id="expJsonBtn">JSON</button>
+<button class="c-blue" id="expCsvBtn">CSV</button>
+<button class="c-indigo" id="expXlsBtn">XLS</button>
+<button class="c-teal" id="expPdfBtn">PDF</button>
+<button class="c-purple" id="impBtn">استيراد</button>
+<button class="c-gray" id="clearBtn">مسح الكل</button>
+</div>
+<div id="stats"><span id="statRows"></span><span id="statCols"></span><span id="statLimit">الحد: 100x100 - السحب والإفلات مفعّل</span></div>
+<div id="tableWrap"><table id="mainTable"></table></div>
+<input type="file" id="importFile" accept=".json,.csv">
+<div id="modal" hidden>
+<div class="modal-card">
+<h3 id="mTitle">تحرير الخلية</h3>
+<label id="lType">النوع</label>
+<select id="mType">
+<option value="text">text - نص</option>
+<option value="number">number - رقم</option>
+<option value="image">image upload - رفع صورة</option>
+<option value="camera">camera - كاميرا مباشرة</option>
+<option value="video">video - فيديو</option>
+<option value="link">link - رابط</option>
+<option value="date">date - تاريخ</option>
+<option value="qr">qr canvas - كود QR</option>
+<option value="bool">bool - صح / خطأ</option>
+<option value="formula">formula - معادلة</option>
+</select>
+<label id="lValue">القيمة</label>
+<input id="mValue" type="text" placeholder="اكتب هنا">
+<input id="mValueNumber" type="number" style="display:none" placeholder="123">
+<input id="mValueDate" type="date" style="display:none">
+<div id="boolWrap" style="display:none;margin-top:8px"><label><input id="mBool" type="checkbox"> <span id="boolLabel">قيمة صحيحة</span></label></div>
+<div id="imageWrap" style="display:none"><input id="mImage" type="file" accept="image/*"><img id="imgPreview" class="preview-img" style="display:none"><div class="small">رفع صورة يحفظ كـ Base64</div></div>
+<div id="cameraWrap" style="display:none"><video id="camVideo" autoplay playsinline style="display:none"></video><canvas id="camCanvas" style="display:none"></canvas><div style="display:flex;gap:8px;margin-top:8px"><button id="camOpenBtn" type="button" class="c-blue" style="flex:1;padding:10px;border:0;border-radius:10px;color:#fff;font-weight:700">فتح الكاميرا getUserMedia</button><button id="camCapBtn" type="button" class="c-green" style="flex:1;padding:10px;border:0;border-radius:10px;color:#fff;font-weight:700;display:none">التقاط صورة</button></div><img id="camPreview" class="preview-img" style="display:none"></div>
+<div id="videoWrap" style="display:none"><input id="mVideo" type="text" placeholder="https:// ... .mp4 أو رابط يوتيوب"><div class="small">يدعم رابط فيديو مباشر</div></div>
+<div id="linkWrap" style="display:none"><input id="mLink" type="url" placeholder="https://example.com"></div>
+<div id="qrWrap" style="display:none"><input id="mQr" type="text" placeholder="نص لتوليد QR"><canvas id="qrPreview" width="160" height="160" class="qr-canvas" style="margin-top:8px"></canvas><div class="small" id="qrHint">سيتم توليد QR من النص باستخدام canvas</div></div>
+<div id="formulaWrap" style="display:none"><input id="mFormula" type="text" placeholder="=A1+B1 أو =A1*2"><div class="small">ادعم A1,B2... معادلات بسيطة مثل =A1+B1</div></div>
+<div class="row2"><div><label id="lTextColor">لون النص</label><input id="mColor" type="color" value="#0f172a"></div><div><label id="lBgColor">لون الخلفية</label><input id="mBg" type="color" value="#ffffff"></div></div>
+<div style="margin-top:10px"><label><input id="mBold" type="checkbox"> <span id="lBold">عريض Bold</span></label></div>
+<div class="btns"><button id="mSave" class="c-green">حفظ</button><button id="mCancel" class="c-red">إلغاء</button></div>
+</div>
+</div>
+<script>
+(function(){
+var T={
+ar:{appTitle:'SAY TABLE - النسخة النهائية',addRow:'+ صف',addCol:'+ عمود',delRow:'حذف صف',delCol:'حذف عمود',expJson:'JSON',expCsv:'CSV',expXls:'XLS',expPdf:'PDF',imp:'استيراد',clear:'مسح الكل',lang:'EN',theme:'🌙 ثيم',save:'حفظ',cancel:'إلغاء',cellTitle:'تحرير الخلية',type:'النوع',value:'القيمة',textColor:'لون النص',bgColor:'لون الخلفية',bold:'عريض Bold',delWarnRow:'هل أنت متأكد من حذف آخر صف؟',delWarnCol:'هل أنت متأكد من حذف آخر عمود؟',delWarnAll:'هل أنت متأكد من مسح كل البيانات؟ سيتم الحذف نهائيا',limit:'الحد: 100x100 - السحب والإفلات مفعّل',camera:'فتح الكاميرا getUserMedia',capture:'التقاط صورة',qrHint:'سيتم توليد QR من النص باستخدام canvas',boolTrue:'قيمة صحيحة',rows:'صفوف',cols:'أعمدة'},
+en:{appTitle:'SAY TABLE - Final',addRow:'+ Row',addCol:'+ Col',delRow:'Del Row',delCol:'Del Col',expJson:'JSON',expCsv:'CSV',expXls:'XLS',expPdf:'PDF',imp:'Import',clear:'Clear All',lang:'AR',theme:'Theme',save:'Save',cancel:'Cancel',cellTitle:'Edit Cell',type:'Type',value:'Value',textColor:'Text Color',bgColor:'BG Color',bold:'Bold',delWarnRow:'Delete last row?',delWarnCol:'Delete last column?',delWarnAll:'Clear all data? This cannot be undone',limit:'Limit: 100x100 - Drag drop enabled',camera:'Open Camera getUserMedia',capture:'Capture',qrHint:'QR will be generated from text using canvas',boolTrue:'True value',rows:'Rows',cols:'Cols'}
+};
+var lang='ar';
+var theme='light';
+var themes=['light','dark','beige','blue'];
+var themeIndex=0;
+var rows=10;
+var cols=6;
+var data=[];
+var selR=0, selC=0;
+var dragRow=null;
+var tempImg='';
+var camStream=null;
+var elTable=document.getElementById('mainTable');
+var elModal=document.getElementById('modal');
+var elMType=document.getElementById('mType');
+var elMValue=document.getElementById('mValue');
+var elMValueNumber=document.getElementById('mValueNumber');
+var elMValueDate=document.getElementById('mValueDate');
+var elBoolWrap=document.getElementById('boolWrap');
+var elMBool=document.getElementById('mBool');
+var elImageWrap=document.getElementById('imageWrap');
+var elMImage=document.getElementById('mImage');
+var elImgPreview=document.getElementById('imgPreview');
+var elCameraWrap=document.getElementById('cameraWrap');
+var elCamVideo=document.getElementById('camVideo');
+var elCamCanvas=document.getElementById('camCanvas');
+var elCamOpen=document.getElementById('camOpenBtn');
+var elCamCap=document.getElementById('camCapBtn');
+var elCamPreview=document.getElementById('camPreview');
+var elVideoWrap=document.getElementById('videoWrap');
+var elMVideo=document.getElementById('mVideo');
+var elLinkWrap=document.getElementById('linkWrap');
+var elMLink=document.getElementById('mLink');
+var elQrWrap=document.getElementById('qrWrap');
+var elMQr=document.getElementById('mQr');
+var elQrPreview=document.getElementById('qrPreview');
+var elFormulaWrap=document.getElementById('formulaWrap');
+var elMFormula=document.getElementById('mFormula');
+var elMColor=document.getElementById('mColor');
+var elMBg=document.getElementById('mBg');
+var elMBold=document.getElementById('mBold');
 
-function colName(n){let s='';n++;while(n>0){let m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
-function load(){try{let raw=localStorage.getItem(STORAGE_KEY);if(raw){data=JSON.parse(raw);}}catch(e){} }
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));document.getElementById('saveStatus').textContent=t('تم الحفظ ✓','Saved ✓');setTimeout(()=>{document.getElementById('saveStatus').textContent=t('محفوظ تلقائيا','Auto-saved');},1200);}catch(e){} updateCount();}
-function key(r,c){return r+'_'+c;}
-function getCell(r,c){return data[key(r,c)]||null;}
+function t(k){ var d=T[lang]||T.ar; return d[k]||k; }
+
+function initData(){ data=[]; for(var r=0;r<rows;r++){ var row=[]; for(var c=0;c<cols;c++){ row.push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } data.push(row); } }
+
+function load(){
+ try{
+  var s=localStorage.getItem('say_table_final_v1');
+  if(s){ var o=JSON.parse(s); rows=o.rows||10; cols=o.cols||6; data=o.data||[]; theme=o.theme||'light'; lang=o.lang||'ar'; themeIndex=themes.indexOf(theme); if(themeIndex<0) themeIndex=0; if(!data.length) initData(); }
+  else initData();
+ }catch(e){ initData(); }
+}
+
+function save(){
+ try{ localStorage.setItem('say_table_final_v1', JSON.stringify({rows:rows,cols:cols,data:data,theme:theme,lang:lang})); }catch(e){}
+ document.documentElement.setAttribute('data-theme',theme);
+ document.documentElement.lang=lang;
+ document.body.dir=lang==='ar'?'rtl':'ltr';
+ applyLang();
+}
+
+function applyLang(){
+ document.getElementById('appTitle').textContent=t('appTitle');
+ document.getElementById('addRowBtn').textContent=t('addRow');
+ document.getElementById('addColBtn').textContent=t('addCol');
+ document.getElementById('delRowBtn').textContent=t('delRow');
+ document.getElementById('delColBtn').textContent=t('delCol');
+ document.getElementById('expJsonBtn').textContent=t('expJson');
+ document.getElementById('expCsvBtn').textContent=t('expCsv');
+ document.getElementById('expXlsBtn').textContent=t('expXls');
+ document.getElementById('expPdfBtn').textContent=t('expPdf');
+ document.getElementById('impBtn').textContent=t('imp');
+ document.getElementById('clearBtn').textContent=t('clear');
+ document.getElementById('langBtn').textContent=t('lang');
+ document.getElementById('themeBtn').textContent=t('theme');
+ document.getElementById('mTitle').textContent=t('cellTitle');
+ document.getElementById('lType').textContent=t('type');
+ document.getElementById('lValue').textContent=t('value');
+ document.getElementById('lTextColor').textContent=t('textColor');
+ document.getElementById('lBgColor').textContent=t('bgColor');
+ document.getElementById('lBold').textContent=t('bold');
+ document.getElementById('statLimit').textContent=t('limit');
+ document.getElementById('mSave').textContent=t('save');
+ document.getElementById('mCancel').textContent=t('cancel');
+ document.getElementById('boolLabel').textContent=t('boolTrue');
+ document.getElementById('qrHint').textContent=t('qrHint');
+ document.getElementById('camOpenBtn').textContent=t('camera');
+ document.getElementById('camCapBtn').textContent=t('capture');
+ document.getElementById('statRows').textContent=t('rows')+': '+rows;
+ document.getElementById('statCols').textContent=t('cols')+': '+cols;
+}
+
+function getColName(n){ var s=''; while(n>=0){ s=String.fromCharCode(65+n%26)+s; n=Math.floor(n/26)-1; } return s; }
+
+function evalFormula(f){
+ if(!f) return '';
+ if(f[0]!=='=') return f;
+ var expr=f.slice(1);
+ expr=expr.replace(/[A-Z]+[0-9]+/g, function(ref){
+  var m=ref.match(/([A-Z]+)([0-9]+)/);
+  if(!m) return '0';
+  var colStr=m[1], rowStr=m[2];
+  var cNum=0;
+  for(var i=0;i<colStr.length;i++){ cNum=cNum*26+(colStr.charCodeAt(i)-64); }
+  cNum=cNum-1;
+  var rNum=parseInt(rowStr,10)-1;
+  if(rNum>=0 && rNum<rows && cNum>=0 && cNum<cols){
+   var v=data[rNum][cNum].v;
+   if(data[rNum][cNum].type==='formula'){ v=evalFormula(v); }
+   var num=parseFloat(v);
+   return isNaN(num)?'0':num.toString();
+  }
+  return '0';
+ });
+ try{ var res=Function('return ('+expr+')')(); return res; }catch(e){ return '#ERR'; }
+}
 
 function renderTable(){
-  const tbl=document.getElementById('mainTable');tbl.innerHTML='';
-  let thead=document.createElement('thead');let hr=document.createElement('tr');let th0=document.createElement('th');th0.textContent='#';hr.appendChild(th0);
-  for(let c=0;c<COLS;c++){let th=document.createElement('th');th.textContent=colName(c);th.dataset.col=c;th.draggable=true;hr.appendChild(th);}thead.appendChild(hr);tbl.appendChild(thead);
-  let tbody=document.createElement('tbody');
-  for(let r=0;r<ROWS;r++){let tr=document.createElement('tr');tr.draggable=true;tr.dataset.row=r;let td0=document.createElement('td');td0.textContent=r+1;tr.appendChild(td0);
-    for(let c=0;c<COLS;c++){let td=document.createElement('td');td.dataset.r=r;td.dataset.c=c;let cell=getCell(r,c);
-      if(cell){td.style.background=cell.bg||'';if(cell.value){let v=cell.value;if(cell.type==='image'){td.innerHTML='<img src="'+v+'" style="max-width:80px;max-height:22px;vertical-align:middle">';}else if(cell.type==='link'){td.innerHTML='<a href="'+v+'" target="_blank" style="color:inherit;text-decoration:underline">'+v+'</a>';}else if(cell.type==='checkbox'){td.textContent=v==='1'?'☑️ '+t('نعم','Yes'):'☐';}else{td.textContent=v.length>24?v.slice(0,24)+'…':v;} if(cell.type!=='text'){let badge=document.createElement('span');badge.className='cell-type';badge.textContent=cell.type;td.appendChild(badge);}} if(cell&&cell.note){td.title=cell.note;}}
-      tr.appendChild(td);}tbody.appendChild(tr);}tbl.appendChild(tbody);
-  bindCellEvents();bindDrag();
+ elTable.innerHTML='';
+ var tr=document.createElement('tr');
+ var th0=document.createElement('th'); th0.textContent='#'; tr.appendChild(th0);
+ for(var c=0;c<cols;c++){ var th=document.createElement('th'); th.textContent=getColName(c); tr.appendChild(th); }
+ elTable.appendChild(tr);
+ for(var r=0;r<rows;r++){
+  tr=document.createElement('tr'); tr.draggable=true; tr.setAttribute('data-row', r);
+  var th=document.createElement('th'); th.textContent=(r+1); tr.appendChild(th);
+  for(var cc=0;cc<cols;cc++){
+   var td=document.createElement('td');
+   var cell=data[r][cc];
+   td.style.color=cell.color;
+   td.style.background=cell.bg;
+   if(cell.bold) td.style.fontWeight='bold';
+   var inner='';
+   if(cell.type==='text'){ inner=cell.v?cell.v.replace(/</g,'&lt;'):''; }
+   else if(cell.type==='number'){ inner=cell.v; }
+   else if(cell.type==='image'){ if(cell.v) inner='<img src="'+cell.v+'" style="max-width:90px;max-height:60px;border-radius:6px">'; }
+   else if(cell.type==='camera'){ if(cell.v) inner='<img src="'+cell.v+'" style="max-width:90px;max-height:60px;border-radius:6px">'; else inner='📷'; }
+   else if(cell.type==='video'){ if(cell.v) { if(cell.v.indexOf('youtube')>-1 || cell.v.indexOf('youtu.be')>-1) inner='<span style="color:#2563eb">▶ يوتيوب</span>'; else inner='<video src="'+cell.v+'" style="max-width:90px;max-height:60px" muted></video>'; } }
+   else if(cell.type==='link'){ if(cell.v) inner='<a href="'+cell.v+'" target="_blank" style="color:#2563eb;text-decoration:underline">'+cell.v.substring(0,18)+'</a>'; }
+   else if(cell.type==='date'){ inner=cell.v; }
+   else if(cell.type==='bool'){ inner=cell.v==='true' || cell.v===true ? '✓' : '✗'; }
+   else if(cell.type==='qr'){ if(cell.v) inner='<canvas class="qr-mini" data-val="'+cell.v.replace(/"/g,'&quot;')+'" width="60" height="60" style="border:1px solid #e2e8f0;border-radius:6px"></canvas>'; else inner='QR'; }
+   else if(cell.type==='formula'){ var ev=evalFormula(cell.v); inner='<span style="font-family:monospace">'+(cell.v||'')+' = '+(ev!==undefined?ev:'')+'</span>'; }
+   else { inner=cell.v||''; }
+   td.innerHTML=inner||'<span style="opacity:.3">-</span>';
+   (function(rr,cc2){ td.addEventListener('click', function(){ openModal(rr,cc2); }); })(r,cc);
+   tr.appendChild(td);
+  }
+  elTable.appendChild(tr);
+ }
+ // render mini QR
+ var cvs=document.querySelectorAll('canvas.qr-mini');
+ for(var i=0;i<cvs.length;i++){ var cv=cvs[i]; var val=cv.getAttribute('data-val')||''; var ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.fillStyle='#000'; for(var k=0;k<val.length;k++){ var x=(val.charCodeAt(k)*7)%(cv.width-6); var y=(k*9)%(cv.height-6); ctx.fillRect(x,y,5,5); } }
+ document.getElementById('statRows').textContent=t('rows')+': '+rows;
+ document.getElementById('statCols').textContent=t('cols')+': '+cols;
+ save();
 }
 
-function bindCellEvents(){
-  document.querySelectorAll('td[data-r]').forEach(td=>{
-    td.addEventListener('click',()=>{
-      document.querySelectorAll('td.selected').forEach(x=>x.classList.remove('selected'));
-      td.classList.add('selected');openModal(parseInt(td.dataset.r),parseInt(td.dataset.c));
-    });
-  });
-}
-function bindDrag(){
-  let dragRow=null;
-  document.querySelectorAll('tr[draggable]').forEach(tr=>{
-    tr.addEventListener('dragstart',e=>{dragRow=tr;tr.classList.add('drag-ghost');});
-    tr.addEventListener('dragend',()=>{tr.classList.remove('drag-ghost');});
-    tr.addEventListener('dragover',e=>e.preventDefault());
-    tr.addEventListener('drop',e=>{
-      e.preventDefault();
-      if(!dragRow||dragRow===tr)return;
-      let rows=Array.from(tr.parentNode.children);
-      let from=rows.indexOf(dragRow);let to=rows.indexOf(tr);
-      if(from<to)tr.parentNode.insertBefore(dragRow,tr.nextSibling);else tr.parentNode.insertBefore(dragRow,tr);
-      // data reorder simple: not full move, just visual + reorder logic could be extended
-    });
-  });
-}
+function addRow(){ if(rows>=100){ alert(t('limit')); return; } var newRow=[]; for(var c=0;c<cols;c++){ newRow.push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } data.push(newRow); rows++; renderTable(); }
+function addCol(){ if(cols>=100){ alert(t('limit')); return; } for(var r=0;r<rows;r++){ data[r].push({v:'',type:'text',bold:false,color:'#0f172a',bg:'#ffffff'}); } cols++; renderTable(); }
+function delRow(){ if(rows<=1){ alert(t('delWarnRow')); return; } if(!confirm(t('delWarnRow'))) return; data.pop(); rows--; renderTable(); }
+function delCol(){ if(cols<=1){ alert(t('delWarnCol')); return; } if(!confirm(t('delWarnCol'))) return; for(var r=0;r<rows;r++){ data[r].pop(); } cols--; renderTable(); }
+function clearAll(){ if(!confirm(t('delWarnAll'))) return; rows=10; cols=6; initData(); renderTable(); }
 
-function openModal(r,c){
-  currentCell={r,c};document.getElementById('cellPos').textContent=colName(c)+(r+1);
-  let cell=getCell(r,c)||{type:'text',value:'',bg:'#ffffff',note:''};
-  document.getElementById('cellBg').value=cell.bg||'#ffffff';
-  document.getElementById('cellNote').value=cell.note||'';
-  renderTypeGrid(cell.type);
-  renderDynamicField(cell);
-  document.getElementById('modalBack').classList.add('open');
-}
-function renderTypeGrid(active){
-  let g=document.getElementById('typeGrid');g.innerHTML='';
-  TYPE_LIST.forEach(tp=>{
-    let b=document.createElement('button');b.className='type-btn'+(tp.id===active?' active':'');b.textContent=t(tp.ar,tp.en);b.onclick=()=>{
-      let cur=getCell(currentCell.r,currentCell.c)||{value:''};let newCell={type:tp.id,value:cur.value||'',bg:document.getElementById('cellBg').value,note:document.getElementById('cellNote').value};
-      document.querySelectorAll('.type-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderDynamicField(newCell);
-    };g.appendChild(b);
-  });
-}
-function renderDynamicField(cell){
-  let cont=document.getElementById('dynamicField');cont.innerHTML='';
-  let activeType=document.querySelector('.type-btn.active');let typeId=activeType?TYPE_LIST.find(x=>t(x.ar,x.en)===activeType.textContent)?.id:cell.type;if(!typeId)typeId=cell.type;
-  let val=cell.value||'';
-  if(typeId==='text'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="'+t('اكتب نص','Type text')+'">';}
-  else if(typeId==='number'){cont.innerHTML='<input id="valInput" type="number" value="'+val+'">';}
-  else if(typeId==='date'){cont.innerHTML='<input id="valInput" type="date" value="'+val+'">';}
-  else if(typeId==='select'){cont.innerHTML='<select id="valInput"><option value="">'+t('اختر','Choose')+'</option><option value="مهم">مهم</option><option value="متوسط">متوسط</option><option value="منخفض">منخفض</option></select>'; if(val)cont.querySelector('select').value=val;}
-  else if(typeId==='checkbox'){cont.innerHTML='<select id="valInput"><option value="0">☐ '+t('لا','No')+'</option><option value="1">☑️ '+t('نعم','Yes')+'</option></select>';cont.querySelector('select').value=val||'0';}
-  else if(typeId==='link'){cont.innerHTML='<input id="valInput" type="url" value="'+val.replace(/"/g,'&quot;')+'" placeholder="https://">';}
-  else if(typeId==='image'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="https://image.jpg"><div style="margin-top:6px;font-size:11px;color:#888">'+t('ضع رابط صورة','Paste image URL')+'</div>';}
-  else if(typeId==='color'){cont.innerHTML='<input id="valInput" type="color" value="'+(val||'#ff0000')+'">';}
-  else if(typeId==='textarea'){cont.innerHTML='<textarea id="valInput" rows="4" placeholder="'+t('فقرة طويلة','Long text')+'">'+val+'</textarea>';}
-  else if(typeId==='formula'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="=A1+B2"><div style="margin-top:6px;font-size:11px;color:#888">'+t('مثال: =A1*2','Ex: =A1*2')+'</div>';}
-}
+function downloadBlob(blob, name){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 500); }
 
-function closeModal(){document.getElementById('modalBack').classList.remove('open');currentCell=null;}
-function applyCell(){
-  if(!currentCell)return;
-  let activeBtn=document.querySelector('.type-btn.active');let typeId='text';
-  if(activeBtn){let found=TYPE_LIST.find(x=>t(x.ar,x.en)===activeBtn.textContent);if(found)typeId=found.id;}
-  let input=document.getElementById('valInput');let v=input?input.value:'';let bg=document.getElementById('cellBg').value;let note=document.getElementById('cellNote').value;
-  let k=key(currentCell.r,currentCell.c);
-  if(!v&&bg==='#ffffff'&&!note){delete data[k];}else{data[k]={type:typeId,value:v,bg:bg,note:note};}
-  save();renderTable();closeModal();
-}
-function deleteCell(){
-  if(!currentCell)return;
-  if(!confirm(t('هل أنت متأكد من حذف هذه الخلية؟ لا يمكن التراجع.','Delete this cell? Cannot undo.')))return;
-  delete data[key(currentCell.r,currentCell.c)];save();renderTable();closeModal();
-}
-function clearAll(){
-  if(!confirm(t('تحذير: سيتم حذف كل الجدول (100×100). هذا الإجراء لا يمكن التراجع عنه!','Warning: Delete entire 100×100 table. Cannot undo!')))return;
-  if(!confirm(t('تأكيد أخير: هل تريد فعلا مسح كل شيء؟','Final confirm: Really wipe everything?')))return;
-  data={};save();renderTable();
-}
-function exportJSON(){
-  let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='say_table.json';a.click();
-}
+function exportJSON(){ var blob=new Blob([JSON.stringify({rows:rows,cols:cols,data:data}, null, 2)], {type:'application/json'}); downloadBlob(blob, 'say-table.json'); }
 function exportCSV(){
-  let csv='';for(let r=0;r<ROWS;r++){let row=[];for(let c=0;c<COLS;c++){let cell=getCell(r,c);row.push(cell?'"'+(cell.value||'').replace(/"/g,'""')+'"':'');}csv+=row.join(',')+'\n';}
-  let blob=new Blob([csv],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='say_table.csv';a.click();
+ var csv='';
+ for(var r=0;r<rows;r++){ var line=[]; for(var c=0;c<cols;c++){ var v=data[r][c].v||''; v=v.toString().replace(/"/g,'""'); if(v.indexOf(',')>-1 || v.indexOf('"')>-1 || v.indexOf('\n')>-1) v='"'+v+'"'; line.push(v); } csv+=line.join(',')+'\n'; }
+ var blob=new Blob([csv], {type:'text/csv;charset=utf-8;'}); downloadBlob(blob, 'say-table.csv');
 }
-function updateCount(){let count=Object.keys(data).length;document.getElementById('cellCount').textContent=count+' '+t('خلية ممتلئة','filled cells');}
-
-document.getElementById('modalClose').onclick=closeModal;
-document.getElementById('btnCancel').onclick=closeModal;
-document.getElementById('btnApply').onclick=applyCell;
-document.getElementById('btnDelCell').onclick=deleteCell;
-document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeModal();});
-document.getElementById('btnSave').onclick=()=>save();
-document.getElementById('btnNew').onclick=()=>{if(confirm(t('بدء جدول جديد؟ سيتم حفظ الحالي أولا.','New table? Current will be saved.'))){save();}};
-document.getElementById('btnClear').onclick=clearAll;
-document.getElementById('btnExportJSON').onclick=exportJSON;
-document.getElementById('btnExportCSV').onclick=exportCSV;
-document.getElementById('fileImport').addEventListener('change',e=>{
-  let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let j=JSON.parse(r.result);data=j;save();renderTable();alert(t('تم الاستيراد','Imported'));}catch(err){alert('CSV import needs custom parser - use JSON for now');}};r.readAsText(f);
-});
-document.getElementById('themeSel').addEventListener('change',e=>{
-  document.body.className='';if(e.target.value!=='light')document.body.classList.add('theme-'+e.target.value);
-  localStorage.setItem('say_table_theme',e.target.value);
-});
-document.getElementById('langBtn').addEventListener('click',()=>{
-  lang=lang==='ar'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
-  document.getElementById('txtInfo').textContent=lang==='ar'?'اضغط على أي خلية للتعديل - اسحب الصفوف لنقلها - الحفظ تلقائي في المتصفح':'Click any cell to edit - drag rows - auto saved';
-  document.getElementById('sizeBadge').textContent='100×100';localStorage.setItem('say_table_lang',lang);
-});
-(function init(){
-  load();
-  let th=localStorage.getItem('say_table_theme');if(th&&th!=='light'){document.body.classList.add('theme-'+th);document.getElementById('themeSel').value=th;}
-  let lg=localStorage.getItem('say_table_lang');if(lg){lang=lg;document.documentElement.lang=lg;document.documentElement.dir=lg==='ar'?'rtl':'ltr';}
-  renderTable();updateCount();
-  setInterval(save,5000);
-})();
+function exportXLS(){
+ var html='<html><head><meta charset="UTF-8"></head><body><table border="1">';
+ for(var r=0;r<rows;r++){ html+='<tr>'; for(var c=0;c<cols;c++){ var cell=data[r][c]; var v=(cell.v||'').toString().replace(/</g,'&lt;'); html+='<td style="background:'+cell.bg+';color:'+cell.color+'">'+v+'</td>'; } html+='</tr>'; }
+ html+='</table></body></html>';
+ var blob=new Blob([html], {type:'application/vnd.ms-excel'}); downloadBlob(blob, 'say-table.xls');
+}
+function exportPDF(){
+ var html='<html><head><meta charset="UTF-8"><title>SAY TABLE PDF</title><style>table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:6px}</style></head><body><h2>SAY TABLE - '+new Date().toLocaleDateString()+'</h2><table>';
+ for(var r=0;r<rows;r++){ html+='<tr>'; for(var c=0;c<cols;c++){ var cell=data[r][c]; var v=(cell.v||'').toString().replace(/</g,'&lt;'); if(cell.type==='formula'){ v=v+' = '+evalFormula(v); } html+='<td>'+v+'</td>'; } html+='</tr>'; }
+ html+='</table
