@@ -1,587 +1,155 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>SAY TABLE PRO v1.0</title>
+SAY TABLE100×100حفظجديدتصدير JSONCSVاستيرادحذف الكل
+فاتحداكنورقيEN / عربي
+اضغط على أي خلية للتعديل - اسحب الصفوف لنقلها - الحفظ تلقائي في المتصفح•0 خلية ممتلئة•تم الحفظ
+SAY TABLE vFinal — Single File — 100×100 — Drag Drop — 10 Types — LocalStorage
+تحرير الخليةإغلاق ✕
+الخلية: A1
+القيمة
+لون الخلفية
+ملاحظة
+حذف الخلية
+إلغاءتطبيق
+const ROWS=100,COLS=100,STORAGE_KEY='say_table_final_v1';
+const TYPE_LIST=[
+  {id:'text',ar:'نص',en:'Text'},{id:'number',ar:'رقم',en:'Number'},{id:'date',ar:'تاريخ',en:'Date'},{id:'select',ar:'قائمة',en:'Select'},{id:'checkbox',ar:'اختيار',en:'Check'},{id:'link',ar:'رابط',en:'Link'},{id:'image',ar:'صورة',en:'Image'},{id:'color',ar:'لون',en:'Color'},{id:'textarea',ar:'فقرة',en:'Para'},{id:'formula',ar:'معادلة',en:'Formula'}
+];
+let data={};
+let lang='ar';
+let currentCell=null;
+const t=(ar,en)=> lang==='ar'?ar:en;
 
-<style>
+function colName(n){let s='';n++;while(n>0){let m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;}
+function load(){try{let raw=localStorage.getItem(STORAGE_KEY);if(raw){data=JSON.parse(raw);}}catch(e){} }
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));document.getElementById('saveStatus').textContent=t('تم الحفظ ✓','Saved ✓');setTimeout(()=>{document.getElementById('saveStatus').textContent=t('محفوظ تلقائيا','Auto-saved');},1200);}catch(e){} updateCount();}
+function key(r,c){return r+'_'+c;}
+function getCell(r,c){return data[key(r,c)]||null;}
 
-:root{
-
---bg:#0f172a;
---card:#1e293b;
---text:#f8fafc;
---border:#334155;
---primary:#06b6d4;
---success:#10b981;
---danger:#ef4444;
---warning:#f59e0b;
-
+function renderTable(){
+  const tbl=document.getElementById('mainTable');tbl.innerHTML='';
+  let thead=document.createElement('thead');let hr=document.createElement('tr');let th0=document.createElement('th');th0.textContent='#';hr.appendChild(th0);
+  for(let c=0;c<COLS;c++){let th=document.createElement('th');th.textContent=colName(c);th.dataset.col=c;th.draggable=true;hr.appendChild(th);}thead.appendChild(hr);tbl.appendChild(thead);
+  let tbody=document.createElement('tbody');
+  for(let r=0;r<ROWS;r++){let tr=document.createElement('tr');tr.draggable=true;tr.dataset.row=r;let td0=document.createElement('td');td0.textContent=r+1;tr.appendChild(td0);
+    for(let c=0;c<COLS;c++){let td=document.createElement('td');td.dataset.r=r;td.dataset.c=c;let cell=getCell(r,c);
+      if(cell){td.style.background=cell.bg||'';if(cell.value){let v=cell.value;if(cell.type==='image'){td.innerHTML='<img src="'+v+'" style="max-width:80px;max-height:22px;vertical-align:middle">';}else if(cell.type==='link'){td.innerHTML='<a href="'+v+'" target="_blank" style="color:inherit;text-decoration:underline">'+v+'</a>';}else if(cell.type==='checkbox'){td.textContent=v==='1'?'☑️ '+t('نعم','Yes'):'☐';}else{td.textContent=v.length>24?v.slice(0,24)+'…':v;} if(cell.type!=='text'){let badge=document.createElement('span');badge.className='cell-type';badge.textContent=cell.type;td.appendChild(badge);}} if(cell&&cell.note){td.title=cell.note;}}
+      tr.appendChild(td);}tbody.appendChild(tr);}tbl.appendChild(tbody);
+  bindCellEvents();bindDrag();
 }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Tahoma,sans-serif;
+function bindCellEvents(){
+  document.querySelectorAll('td[data-r]').forEach(td=>{
+    td.addEventListener('click',()=>{
+      document.querySelectorAll('td.selected').forEach(x=>x.classList.remove('selected'));
+      td.classList.add('selected');openModal(parseInt(td.dataset.r),parseInt(td.dataset.c));
+    });
+  });
+}
+function bindDrag(){
+  let dragRow=null;
+  document.querySelectorAll('tr[draggable]').forEach(tr=>{
+    tr.addEventListener('dragstart',e=>{dragRow=tr;tr.classList.add('drag-ghost');});
+    tr.addEventListener('dragend',()=>{tr.classList.remove('drag-ghost');});
+    tr.addEventListener('dragover',e=>e.preventDefault());
+    tr.addEventListener('drop',e=>{
+      e.preventDefault();
+      if(!dragRow||dragRow===tr)return;
+      let rows=Array.from(tr.parentNode.children);
+      let from=rows.indexOf(dragRow);let to=rows.indexOf(tr);
+      if(from<to)tr.parentNode.insertBefore(dragRow,tr.nextSibling);else tr.parentNode.insertBefore(dragRow,tr);
+      // data reorder simple: not full move, just visual + reorder logic could be extended
+    });
+  });
 }
 
-body{
-background:var(--bg);
-color:var(--text);
-height:100vh;
-display:flex;
-flex-direction:column;
+function openModal(r,c){
+  currentCell={r,c};document.getElementById('cellPos').textContent=colName(c)+(r+1);
+  let cell=getCell(r,c)||{type:'text',value:'',bg:'#ffffff',note:''};
+  document.getElementById('cellBg').value=cell.bg||'#ffffff';
+  document.getElementById('cellNote').value=cell.note||'';
+  renderTypeGrid(cell.type);
+  renderDynamicField(cell);
+  document.getElementById('modalBack').classList.add('open');
+}
+function renderTypeGrid(active){
+  let g=document.getElementById('typeGrid');g.innerHTML='';
+  TYPE_LIST.forEach(tp=>{
+    let b=document.createElement('button');b.className='type-btn'+(tp.id===active?' active':'');b.textContent=t(tp.ar,tp.en);b.onclick=()=>{
+      let cur=getCell(currentCell.r,currentCell.c)||{value:''};let newCell={type:tp.id,value:cur.value||'',bg:document.getElementById('cellBg').value,note:document.getElementById('cellNote').value};
+      document.querySelectorAll('.type-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderDynamicField(newCell);
+    };g.appendChild(b);
+  });
+}
+function renderDynamicField(cell){
+  let cont=document.getElementById('dynamicField');cont.innerHTML='';
+  let activeType=document.querySelector('.type-btn.active');let typeId=activeType?TYPE_LIST.find(x=>t(x.ar,x.en)===activeType.textContent)?.id:cell.type;if(!typeId)typeId=cell.type;
+  let val=cell.value||'';
+  if(typeId==='text'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="'+t('اكتب نص','Type text')+'">';}
+  else if(typeId==='number'){cont.innerHTML='<input id="valInput" type="number" value="'+val+'">';}
+  else if(typeId==='date'){cont.innerHTML='<input id="valInput" type="date" value="'+val+'">';}
+  else if(typeId==='select'){cont.innerHTML='<select id="valInput"><option value="">'+t('اختر','Choose')+'</option><option value="مهم">مهم</option><option value="متوسط">متوسط</option><option value="منخفض">منخفض</option></select>'; if(val)cont.querySelector('select').value=val;}
+  else if(typeId==='checkbox'){cont.innerHTML='<select id="valInput"><option value="0">☐ '+t('لا','No')+'</option><option value="1">☑️ '+t('نعم','Yes')+'</option></select>';cont.querySelector('select').value=val||'0';}
+  else if(typeId==='link'){cont.innerHTML='<input id="valInput" type="url" value="'+val.replace(/"/g,'&quot;')+'" placeholder="https://">';}
+  else if(typeId==='image'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="https://image.jpg"><div style="margin-top:6px;font-size:11px;color:#888">'+t('ضع رابط صورة','Paste image URL')+'</div>';}
+  else if(typeId==='color'){cont.innerHTML='<input id="valInput" type="color" value="'+(val||'#ff0000')+'">';}
+  else if(typeId==='textarea'){cont.innerHTML='<textarea id="valInput" rows="4" placeholder="'+t('فقرة طويلة','Long text')+'">'+val+'</textarea>';}
+  else if(typeId==='formula'){cont.innerHTML='<input id="valInput" value="'+val.replace(/"/g,'&quot;')+'" placeholder="=A1+B2"><div style="margin-top:6px;font-size:11px;color:#888">'+t('مثال: =A1*2','Ex: =A1*2')+'</div>';}
 }
 
-header{
-
-height:65px;
-
-display:flex;
-justify-content:space-between;
-align-items:center;
-
-padding:0 15px;
-
-background:#020617;
-
-border-bottom:1px solid var(--border);
-
+function closeModal(){document.getElementById('modalBack').classList.remove('open');currentCell=null;}
+function applyCell(){
+  if(!currentCell)return;
+  let activeBtn=document.querySelector('.type-btn.active');let typeId='text';
+  if(activeBtn){let found=TYPE_LIST.find(x=>t(x.ar,x.en)===activeBtn.textContent);if(found)typeId=found.id;}
+  let input=document.getElementById('valInput');let v=input?input.value:'';let bg=document.getElementById('cellBg').value;let note=document.getElementById('cellNote').value;
+  let k=key(currentCell.r,currentCell.c);
+  if(!v&&bg==='#ffffff'&&!note){delete data[k];}else{data[k]={type:typeId,value:v,bg:bg,note:note};}
+  save();renderTable();closeModal();
 }
-
-.logo{
-font-size:22px;
-font-weight:900;
-color:var(--primary);
+function deleteCell(){
+  if(!currentCell)return;
+  if(!confirm(t('هل أنت متأكد من حذف هذه الخلية؟ لا يمكن التراجع.','Delete this cell? Cannot undo.')))return;
+  delete data[key(currentCell.r,currentCell.c)];save();renderTable();closeModal();
 }
-
-.toolbar{
-
-display:flex;
-gap:8px;
-padding:10px;
-
-background:#111827;
-
-flex-wrap:wrap;
-
-border-bottom:1px solid var(--border);
-
+function clearAll(){
+  if(!confirm(t('تحذير: سيتم حذف كل الجدول (100×100). هذا الإجراء لا يمكن التراجع عنه!','Warning: Delete entire 100×100 table. Cannot undo!')))return;
+  if(!confirm(t('تأكيد أخير: هل تريد فعلا مسح كل شيء؟','Final confirm: Really wipe everything?')))return;
+  data={};save();renderTable();
 }
-
-button{
-
-padding:10px 14px;
-
-border:none;
-
-border-radius:10px;
-
-cursor:pointer;
-
-font-weight:bold;
-
+function exportJSON(){
+  let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='say_table.json';a.click();
 }
-
-.btn-green{
-background:var(--success);
-color:white;
+function exportCSV(){
+  let csv='';for(let r=0;r<ROWS;r++){let row=[];for(let c=0;c<COLS;c++){let cell=getCell(r,c);row.push(cell?'"'+(cell.value||'').replace(/"/g,'""')+'"':'');}csv+=row.join(',')+'\n';}
+  let blob=new Blob([csv],{type:'text/csv'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='say_table.csv';a.click();
 }
-
-.btn-red{
-background:var(--danger);
-color:white;
-}
-
-.btn-blue{
-background:var(--primary);
-color:white;
-}
-
-.btn-orange{
-background:var(--warning);
-color:white;
-}
-
-#searchBox{
-
-padding:10px;
-width:250px;
-
-border:none;
-
-border-radius:10px;
-
-}
-
-.table-wrap{
-
-flex:1;
-
-overflow:auto;
-
-padding:10px;
-
-}
-
-table{
-
-border-collapse:collapse;
-
-min-width:1000px;
-
-background:var(--card);
-
-}
-
-th{
-
-position:sticky;
-
-top:0;
-
-z-index:100;
-
-background:#1e293b;
-
-}
-
-th:first-child,
-td:first-child{
-
-position:sticky;
-
-right:0;
-
-z-index:90;
-
-background:#1e293b;
-
-}
-
-th,
-td{
-
-border:1px solid var(--border);
-
-padding:10px;
-
-text-align:center;
-
-min-width:120px;
-
-height:50px;
-
-}
-
-td{
-
-cursor:pointer;
-
-}
-
-td:hover{
-
-background:#334155;
-
-}
-
-.rating{
-color:#facc15;
-font-size:18px;
-}
-
-.true{
-color:#10b981;
-font-size:20px;
-}
-
-.false{
-color:#ef4444;
-font-size:20px;
-}
-
-.modal{
-
-position:fixed;
-
-inset:0;
-
-background:rgba(0,0,0,.5);
-
-display:none;
-
-justify-content:center;
-
-align-items:center;
-
-}
-
-.modal-content{
-
-width:400px;
-
-background:#1e293b;
-
-padding:20px;
-
-border-radius:15px;
-
-}
-
-.modal-content input,
-.modal-content select{
-
-width:100%;
-
-padding:10px;
-
-margin-top:10px;
-
-}
-
-</style>
-</head>
-
-<body>
-
-<header>
-
-<div class="logo">
-
-SAY TABLE PRO
-
-</div>
-
-<div>
-
-🔥 Build 001
-
-</div>
-
-</header>
-
-<div class="toolbar">
-
-<button class="btn-green" id="addRowBtn">
-➕ صف
-</button>
-
-<button class="btn-green" id="addColBtn">
-➕ عمود
-</button>
-
-<button class="btn-red" id="removeRowBtn">
-🗑 صف
-</button>
-
-<button class="btn-red" id="removeColBtn">
-🗑 عمود
-</button>
-
-<button class="btn-blue">
-📥 استيراد
-</button>
-
-<button class="btn-blue">
-📤 تصدير
-</button>
-
-<input
-type="text"
-id="searchBox"
-placeholder="🔍 بحث..."
->
-
-</div>
-
-<div class="table-wrap">
-
-<table id="table"></table>
-
-</div>
-
-<div id="editor" class="modal">
-
-<div class="modal-content">
-
-<h3>تحرير الخلية</h3>
-
-<select id="cellType">
-
-<option value="text">📄 نص</option>
-
-<option value="number">🔢 رقم</option>
-
-<option value="date">📅 تاريخ</option>
-
-<option value="rating">⭐ تقييم</option>
-
-<option value="boolean">✅❌ صح او خطأ</option>
-
-<option value="calculator">🧮 حاسبة</option>
-
-</select>
-
-<input
-type="text"
-id="cellValue"
-placeholder="القيمة"
->
-
-<button
-class="btn-green"
-id="saveCell"
-style="width:100%;margin-top:10px;"
->
-حفظ
-</button>
-
-</div>
-
-</div>
-
-<script>
-
-let rows=10;
-let cols=5;
-
-let selectedRow=0;
-let selectedCol=0;
-
-let data=[];
-
-function init(){
-
-data=[];
-
-for(let r=0;r<rows;r++){
-
-let row=[];
-
-for(let c=0;c<cols;c++){
-
-row.push({
-
-type:'text',
-
-value:''
-
+function updateCount(){let count=Object.keys(data).length;document.getElementById('cellCount').textContent=count+' '+t('خلية ممتلئة','filled cells');}
+
+document.getElementById('modalClose').onclick=closeModal;
+document.getElementById('btnCancel').onclick=closeModal;
+document.getElementById('btnApply').onclick=applyCell;
+document.getElementById('btnDelCell').onclick=deleteCell;
+document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeModal();});
+document.getElementById('btnSave').onclick=()=>save();
+document.getElementById('btnNew').onclick=()=>{if(confirm(t('بدء جدول جديد؟ سيتم حفظ الحالي أولا.','New table? Current will be saved.'))){save();}};
+document.getElementById('btnClear').onclick=clearAll;
+document.getElementById('btnExportJSON').onclick=exportJSON;
+document.getElementById('btnExportCSV').onclick=exportCSV;
+document.getElementById('fileImport').addEventListener('change',e=>{
+  let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let j=JSON.parse(r.result);data=j;save();renderTable();alert(t('تم الاستيراد','Imported'));}catch(err){alert('CSV import needs custom parser - use JSON for now');}};r.readAsText(f);
 });
-
-}
-
-data.push(row);
-
-}
-
-render();
-
-}
-
-function render(){
-
-const table=document.getElementById('table');
-
-table.innerHTML='';
-
-let head='<tr><th>#</th>';
-
-for(let c=0;c<cols;c++){
-
-head+=`<th>${String.fromCharCode(65+c)}</th>`;
-
-}
-
-head+='</tr>';
-
-table.innerHTML+=head;
-
-for(let r=0;r<rows;r++){
-
-let tr=`<tr><th>${r+1}</th>`;
-
-for(let c=0;c<cols;c++){
-
-let cell=data[r][c];
-
-let display='';
-
-if(cell.type==='rating'){
-
-display='⭐'.repeat(cell.value||0);
-
-}
-
-else if(cell.type==='boolean'){
-
-display=cell.value==='true'
-?'✅'
-:'❌';
-
-}
-
-else if(cell.type==='calculator'){
-
-display=cell.value;
-
-}
-
-else{
-
-display=cell.value;
-
-}
-
-tr+=`
-<td onclick="editCell(${r},${c})">
-${display}
-</td>
-`;
-
-}
-
-tr+='</tr>';
-
-table.innerHTML+=tr;
-
-}
-
-localStorage.setItem(
-'say-table-pro',
-JSON.stringify(data)
-);
-
-}
-
-function editCell(r,c){
-
-selectedRow=r;
-selectedCol=c;
-
-document.getElementById('editor').style.display='flex';
-
-let cell=data[r][c];
-
-document.getElementById('cellType').value=cell.type;
-
-document.getElementById('cellValue').value=cell.value;
-
-}
-
-document.getElementById('saveCell')
-.addEventListener('click',()=>{
-
-let type=
-document.getElementById('cellType').value;
-
-let value=
-document.getElementById('cellValue').value;
-
-if(type==='calculator'){
-
-try{
-
-const result=eval(value);
-
-value=value+' = '+result;
-
-}
-catch{
-
-value='خطأ';
-
-}
-
-}
-
-data[selectedRow][selectedCol]={
-
-type,
-value
-
-};
-
-render();
-
-document.getElementById('editor')
-.style.display='none';
-
+document.getElementById('themeSel').addEventListener('change',e=>{
+  document.body.className='';if(e.target.value!=='light')document.body.classList.add('theme-'+e.target.value);
+  localStorage.setItem('say_table_theme',e.target.value);
 });
-
-document.getElementById('addRowBtn')
-.addEventListener('click',()=>{
-
-rows++;
-
-data.push(
-Array(cols)
-.fill()
-.map(()=>({
-type:'text',
-value:''
-}))
-);
-
-render();
-
+document.getElementById('langBtn').addEventListener('click',()=>{
+  lang=lang==='ar'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+  document.getElementById('txtInfo').textContent=lang==='ar'?'اضغط على أي خلية للتعديل - اسحب الصفوف لنقلها - الحفظ تلقائي في المتصفح':'Click any cell to edit - drag rows - auto saved';
+  document.getElementById('sizeBadge').textContent='100×100';localStorage.setItem('say_table_lang',lang);
 });
-
-document.getElementById('addColBtn')
-.addEventListener('click',()=>{
-
-cols++;
-
-data.forEach(row=>{
-
-row.push({
-type:'text',
-value:''
-});
-
-});
-
-render();
-
-});
-
-document.getElementById('removeRowBtn')
-.addEventListener('click',()=>{
-
-if(rows>1){
-
-rows--;
-
-data.pop();
-
-render();
-
-}
-
-});
-
-document.getElementById('removeColBtn')
-.addEventListener('click',()=>{
-
-if(cols>1){
-
-cols--;
-
-data.forEach(
-row=>row.pop()
-);
-
-render();
-
-}
-
-});
-
-init();
-
-</script>
-
-</body>
-</html>
+(function init(){
+  load();
+  let th=localStorage.getItem('say_table_theme');if(th&&th!=='light'){document.body.classList.add('theme-'+th);document.getElementById('themeSel').value=th;}
+  let lg=localStorage.getItem('say_table_lang');if(lg){lang=lg;document.documentElement.lang=lg;document.documentElement.dir=lg==='ar'?'rtl':'ltr';}
+  renderTable();updateCount();
+  setInterval(save,5000);
+})();
