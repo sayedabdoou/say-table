@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
@@ -28,7 +28,8 @@
 [data-theme="violet"]{--acc:#7c3aed;--accSoft:#f1eafe}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Tahoma,system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.5;font-size:14px;-webkit-tap-highlight-color:transparent;padding-bottom:70px}
+@font-face{font-family:'LatinDigits';src:local('Arial'),local('Helvetica Neue'),local('Helvetica'),local('Roboto'),local('Liberation Sans'),local('DejaVu Sans');unicode-range:U+0030-0039}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'LatinDigits','Segoe UI',Tahoma,system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.5;font-size:14px;-webkit-tap-highlight-color:transparent;padding-bottom:70px}
 button{font-family:inherit}
 /* ---------- header ---------- */
 #appHeader{padding:16px 14px 8px;display:flex;flex-direction:column;gap:12px}
@@ -4687,7 +4688,7 @@ function prepHtmlImgs(){
 }
 function exportHTML(){
  prepHtmlImgs().then(function(map){
- var html='<!DOCTYPE html><html lang="'+S.lang+'" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
+ var html='<!DOCTYPE html><html lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
  +'<style>body{font-family:Tahoma,Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:7px;font-size:13px}th{background:#eef2ff}.rn{background:#f5f5f5;color:#888}</style></head><body>'
  +'<h2>'+esc(S.hdr.name||'SAY TABLE PRO')+'</h2>'+hdrHTML()+styledTableHTML(map)+'</body></html>';
  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),'say-table-pro.html');
@@ -4697,7 +4698,7 @@ function exportHTML(){
 function exportPDF(){
  var w=window.open('','_blank');
  prepHtmlImgs().then(function(map){
- var html='<!DOCTYPE html><html lang="'+S.lang+'" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
+ var html='<!DOCTYPE html><html lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
  +'<style>@page{margin:12mm}body{font-family:Tahoma,Arial,sans-serif}h2{margin:0 0 4px}.d{color:#888;font-size:12px;margin-bottom:10px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px;font-size:11.5px}th{background:#eef2ff}.rn{background:#f5f5f5;color:#888}td{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>'
  +'<h2>'+esc(S.hdr.name||'SAY TABLE PRO')+'</h2><div class="d">'+new Date().toLocaleString(S.lang==='ar'?'ar-u-nu-latn':'en')+'</div>'
  +hdrHTML()+styledTableHTML(map)
@@ -4826,7 +4827,7 @@ function applyTheme(){
  if(mc)mc.setAttribute('content',S.theme==='dark'?'#101312':'#ffffff');
 }
 function applyLang(){
- document.documentElement.lang=S.lang;
+ document.documentElement.lang='en';
  document.body.dir=S.lang==='ar'?'rtl':'ltr';
  var els=document.querySelectorAll('[data-i18n]');
  for(var i=0;i<els.length;i++)els[i].textContent=t(els[i].getAttribute('data-i18n'));
