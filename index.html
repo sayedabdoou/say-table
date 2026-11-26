@@ -361,6 +361,20 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 .pjRow button:hover{opacity:1;background:rgba(128,128,128,.15)}
 .pjNew{width:100%;justify-content:center}
 .pjInput{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;margin:6px 0 14px;background:var(--card);color:var(--text)}
+
+#projHdr .pnameBox{flex:0 0 100%;max-width:100%;align-items:center;margin:0 0 4px}
+#projHdr .pnameBox label{text-align:center;padding:0}
+#projHdr .pnRow{width:100%;max-width:560px;display:flex;align-items:stretch;gap:8px}
+#projHdr .pnameBox input{flex:1 1 0;width:auto;min-width:0;font-size:22px;font-weight:900;padding:10px 22px;line-height:1.3;text-align:center;border-radius:20px}
+#projBtn{border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:20px;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:18px;flex:none}
+@media(min-width:900px){#appHeader .searchRow{flex:0 1 auto;justify-content:center}#appHeader .searchBox{min-width:230px}}
+@media(max-width:480px){#projHdr .pnameBox input{font-size:19px;padding:9px 12px}#projBtn{padding:0 10px}}
+#projHdr .pnameBox,#projHdr .pnRow{min-width:0;box-sizing:border-box}
+#projBtn .pa{font-size:15px;font-weight:900}
+#projBtn:hover{border-color:var(--acc)}
+#projBtn:active{transform:scale(.96)}
+@media print{#projBtn{display:none}}
+#projHdr .pnameBox label{font-size:11.5px}
 </style>
 </head>
 <body>
@@ -387,7 +401,6 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
     </div>
   </div>
   <div class="mainPills">
-    <button class="pill white" id="projBtn" title="مشاريعي">📁 <span class="pn"></span> ▾</button>
     <button class="pill green" id="tbImport">⬆️ <span data-i18n="import">استيراد</span></button>
     <button class="pill black" id="tbExport">⬇️ <span data-i18n="export">تصدير</span></button>
     <button class="pill black round" id="langBtn" title="Language">EN</button>
@@ -444,7 +457,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 </div>
 
 <div id="projHdr">
-  <div class="ph"><label for="hdrName" data-i18n="hdrName">اسم المشروع</label><input id="hdrName" type="text" data-i18n-ph="hdrNamePh" placeholder="اسم المشروع" autocomplete="off"></div>
+  <div class="ph pnameBox"><label for="hdrName" data-i18n="hdrName">اسم المشروع</label><div class="pnRow"><button type="button" id="projBtn" title="مشاريعي"><span class="pi">📁</span><span class="pa">▾</span></button><input id="hdrName" type="text" data-i18n-ph="hdrNamePh" placeholder="اسم المشروع" autocomplete="off"></div></div>
   <div class="ph"><label for="hdrDate" data-i18n="hdrDate">التاريخ</label><input id="hdrDate" type="text" class="dtIn" readonly inputmode="none" dir="ltr" placeholder="YYYY-MM-DD" autocomplete="off"></div>
   <div class="ph"><label for="hdrDept" data-i18n="hdrDept">الإدارة</label><input id="hdrDept" type="text" data-i18n-ph="hdrDeptPh" placeholder="الإدارة" autocomplete="off"></div>
   <div class="ph"><label for="hdrPerson" data-i18n="hdrPerson">الاسم</label><input id="hdrPerson" type="text" data-i18n-ph="hdrPersonPh" placeholder="الاسم" autocomplete="off"></div>
@@ -5174,7 +5187,7 @@ function pTouch(){
 function updateProjBtn(){
  var b=$('projBtn');if(!b)return;
  var r=pReg();var p=r&&pFind(r,r.active);
- b.querySelector('.pn').textContent=p?p.name:pL('مشاريعي','Projects');
+ 
  b.title=pL('مشاريعي','My projects');
 }
 function pFmt(ts){
