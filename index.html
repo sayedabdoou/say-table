@@ -5169,28 +5169,31 @@ function openActivation(blocking){
 var FBK='say_fb_v1';
 function fbLoad(){try{return JSON.parse(localStorage.getItem(FBK)||'{}')||{};}catch(e){return {};}}
 function fbSave(o){if(window.__so)return;try{localStorage.setItem(FBK,JSON.stringify(o));}catch(e){}fbBtn();}
-function fbBtn(){var b=document.getElementById('tbRate');if(!b)return;var o=fbLoad();b.hidden=!!o.sent;b.classList.toggle('pulse',!o.sent&&!o.q&&!o.rating);}
+function fbBtn(){var b=document.getElementById('tbRate');if(!b)return;var o=fbLoad();b.hidden=false;b.classList.toggle('pulse',!o.sent&&!o.q&&!o.rating);}
 function fbSend(){
- var o=fbLoad();if(!o.q||o.sent||!LIC.dev)return Promise.resolve(false);
- var f={rating:{integerValue:String(o.q.rating)}};
+ var o=fbLoad();if(!o.q||!LIC.dev)return Promise.resolve(false);
+ if(!o.q.id){o.q.id=LIC.dev+'-'+Date.now().toString(36);fbSave(o);}
+ var qid=o.q.id;
+ var f={rating:{integerValue:String(o.q.rating)},deviceId:{stringValue:LIC.dev}};
+ if(LIC.code)f.code={stringValue:String(LIC.code).slice(0,100)};
  if(o.q.comment)f.comment={stringValue:o.q.comment};
  if(o.q.name)f.name={stringValue:o.q.name};
- return licPost({writes:[{update:{name:FB_DOC+'feedback/'+LIC.dev,fields:f},updateTransforms:[{fieldPath:'createdAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:false}}]}).then(function(r){
+ return licPost({writes:[{update:{name:FB_DOC+'feedback/'+qid,fields:f},updateTransforms:[{fieldPath:'createdAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:false}}]}).then(function(r){
   if(r.status===200||r.status===409){o.sent=true;o.q=null;fbSave(o);return true;}
   if(r.status===403||r.status===400){o.q=null;fbSave(o);return false;}
   return false;
  }).catch(function(){return false;});
 }
 function openRating(){
- var o=fbLoad(),sent=!!o.sent,cur=(o.q&&o.q.rating)||o.rating||0;
+ var o=fbLoad(),sent=false,cur=0;
  var stars='';for(var i=1;i<=5;i++)stars+='<button type="button" class="fbStar" data-s="'+i+'" style="border:0;background:transparent;font-size:34px;cursor:pointer;padding:2px 4px;color:'+(i<=cur?'#f5b301':'#9aa3a0')+'">'+(i<=cur?'★':'☆')+'</button>';
  openGen('<h3>⭐ '+esc(pL('قيّم التطبيق','Rate the app'))+'<button class="x" data-gc>✕</button></h3>'
   +(sent?'<div class="small" style="margin-bottom:8px">'+esc(pL('شكرًا لك! وصلنا تقييمك.','Thank you! We received your rating.'))+'</div>'
    :'<div id="fbStars" style="text-align:center;direction:ltr">'+stars+'</div>'
-   +'<label>'+esc(pL('اسمك (اختياري)','Your name (optional)'))+'</label><input type="text" id="fbName" maxlength="40" autocomplete="off">'
+   +'<label>'+esc(pL('اسمك (اختياري)','Your name (optional)'))+'</label><input type="text" id="fbName" maxlength="40" autocomplete="off" value="'+esc(o.name||'')+'">'
    +'<label>'+esc(pL('تعليق (اختياري)','Comment (optional)'))+'</label><textarea id="fbCmt" maxlength="500" rows="3" style="width:100%;box-sizing:border-box"></textarea>'
    +'<div class="btnsRow"><button class="pill black" id="fbGo" style="flex:1;justify-content:center">'+esc(pL('إرسال التقييم','Send rating'))+'</button></div>'
-   +'<div class="small" id="fbMsg" style="min-height:16px">'+((o.q&&!o.sent)?esc(pL('تقييمك محفوظ وهيتبعت لما يتوفر اتصال.','Your rating is saved and will be sent when you are online.')):'')+'</div>'));
+   +'<div class="small" id="fbMsg" style="min-height:16px">'+(o.q?esc(pL('تقييمك محفوظ وهيتبعت لما يتوفر اتصال.','Your rating is saved and will be sent when you are online.')):'')+'</div>'));
  wireGenClose();
  if(sent)return;
  var sel=cur;
@@ -5200,7 +5203,7 @@ function openRating(){
  $('fbGo').onclick=function(){
   if(!sel){$('fbMsg').textContent=pL('اختار عدد النجوم أولاً.','Pick a star rating first.');return;}
   var cm=($('fbCmt').value||'').trim().slice(0,500),nm=($('fbName').value||'').trim().slice(0,40);
-  fbSave({rating:sel,q:{rating:sel,comment:cm,name:nm},sent:false});
+  fbSave({rating:sel,name:nm,q:{id:(LIC.dev?LIC.dev+'-'+Date.now().toString(36):''),rating:sel,comment:cm,name:nm},sent:!!fbLoad().sent});
   $('fbGo').disabled=true;$('fbMsg').textContent=pL('جاري الإرسال...','Sending...');
   fbSend().then(function(ok){
    if(ok){$('genModal').hidden=true;toast(pL('شكرًا لتقييمك ⭐','Thanks for your rating ⭐'));}
