@@ -339,6 +339,10 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
  #toolbar .pill{padding:5px 9px;font-size:11.5px}
  #projHdr .ph{flex:1 1 44%}
 }
+
+/* ===== v16 forced latin digits ===== */
+.num,.stepper input,.mono,#projHdr input.dtIn,#dpCard,.sizePill,.statCard .n{font-family:'LatinDigits',Arial,Helvetica,sans-serif;font-variant-numeric:lining-nums;unicode-bidi:isolate}
+.stepper input{unicode-bidi:plaintext}
 </style>
 </head>
 <body>
@@ -401,13 +405,13 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 <div id="gridCtl">
   <div class="ctlRow">
    <span class="ctlGroup">
-    <span class="stepper"><button id="rowMinus">−</button><span class="lbl" data-i18n="rowsL">الصفوف</span><input id="rowCount" type="number" min="1" max="100" value="10"><button id="rowPlus">+</button></span>
+    <span class="stepper"><button id="rowMinus">−</button><span class="lbl" data-i18n="rowsL">الصفوف</span><input id="rowCount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" dir="ltr" lang="en" autocomplete="off" value="10"><button id="rowPlus">+</button></span>
     <label class="tglWrap"><input type="checkbox" id="totalsToggle"> <span data-i18n="totalsRow">صف الإجمالي</span></label>
    </span>
    <span class="sizePill" id="sizePill">10×10</span>
    <span class="ctlGroup end">
     <label class="tglWrap"><input type="checkbox" id="totalsColToggle"> <span data-i18n="totalsCol">عمود الإجمالي</span></label>
-    <span class="stepper"><button id="colMinus">−</button><span class="lbl" data-i18n="colsL">الأعمدة</span><input id="colCount" type="number" min="1" max="100" value="10"><button id="colPlus">+</button></span>
+    <span class="stepper"><button id="colMinus">−</button><span class="lbl" data-i18n="colsL">الأعمدة</span><input id="colCount" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" dir="ltr" lang="en" autocomplete="off" value="10"><button id="colPlus">+</button></span>
    </span>
   </div>
   <span id="filterChips"></span>
@@ -3293,6 +3297,14 @@ document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load'
 if(window.ResizeObserver){var ro=new ResizeObserver(fit);['appHeader','toolbar','gridCtl','tipBanner','projHdr'].forEach(function(id){var e=document.getElementById(id);if(e)ro.observe(e);});}
 window.fitTable=fit;
 })();
+
+/* ===== numeric text inputs: latin digits only ===== */
+(function(){
+document.addEventListener('input',function(e){var el=e.target;if(!el||!el.id)return;
+ if(el.id==='rowCount'||el.id==='colCount'){var v=enDigits(el.value).replace(/[^0-9]/g,'');if(v!==el.value)el.value=v;}
+ else if(el.id==='ceNum'){var w=enDigits(el.value).replace(/٫/g,'.').replace(/٬/g,',').replace(/[^0-9.,\-+eE]/g,'');if(w!==el.value)el.value=w;}
+},true);
+})();
 function fixDigitInputs(root){var l=(root||document).querySelectorAll('input[type=date],input[type=number],input[type=time],input[type=month],input[type=datetime-local]');for(var i=0;i<l.length;i++)if(l[i].getAttribute('lang')!=='en-US')l[i].setAttribute('lang','en-US');}
 function swapCells(a,b){pushHist();var tmp=S.data[a[0]][a[1]];S.data[a[0]][a[1]]=S.data[b[0]][b[1]];S.data[b[0]][b[1]]=tmp;toast(t('swapped'));renderAll();}
 function guardedSwap(a,b){
@@ -3509,7 +3521,7 @@ function renderStatus(){
     if(cell.type==='file')files++;
     if(cell.type==='audio')auds++;
    }}}
- $('statusBar').innerHTML='<span><b>'+S.rows+'</b> '+t('stRows')+'</span><span><b>'+S.cols+'</b> '+t('stCols')+'</span><span><b>'+filled+'</b> '+t('stFilled')+'</span><span><b>'+imgs+'</b> '+t('stImgs')+'</span><span><b>'+files+'</b> '+t('stFiles')+'</span><span><b>'+auds+'</b> '+t('stAudio')+'</span>'+(vis<S.rows?'<span><b>'+vis+'</b> '+t('stVisible')+'</span>':'');
+ $('statusBar').innerHTML='<span><b lang="en" dir="ltr" class="num">'+S.rows+'</b> '+t('stRows')+'</span><span><b lang="en" dir="ltr" class="num">'+S.cols+'</b> '+t('stCols')+'</span><span><b lang="en" dir="ltr" class="num">'+filled+'</b> '+t('stFilled')+'</span><span><b lang="en" dir="ltr" class="num">'+imgs+'</b> '+t('stImgs')+'</span><span><b lang="en" dir="ltr" class="num">'+files+'</b> '+t('stFiles')+'</span><span><b lang="en" dir="ltr" class="num">'+auds+'</b> '+t('stAudio')+'</span>'+(vis<S.rows?'<span><b lang="en" dir="ltr" class="num">'+vis+'</b> '+t('stVisible')+'</span>':'');
 }
 /* ============ real QR via embedded qrcode-generator ============ */
 function qrDraw(canvas,text){
@@ -3573,7 +3585,7 @@ var CALC_KEYS=['7','8','9','+','4','5','6','-','1','2','3','*','0','.','C','/','
 function renderCEBody(){
  var b=$('ceBody');var cell=S.data[CE.r][CE.c];var v=cell.v;var ty=CE.type;var h='';
  if(ty==='text')h='<label>'+t('value')+'</label><textarea id="ceText" rows="3">'+esc(v)+'</textarea>';
- else if(ty==='number')h='<label>'+t('value')+'</label><input id="ceNum" type="number" value="'+esc(v)+'">';
+ else if(ty==='number')h='<label>'+t('value')+'</label><input id="ceNum" type="text" inputmode="decimal" dir="ltr" lang="en" autocomplete="off" value="'+esc(v)+'">';
  else if(ty==='date')h='<label>'+t('value')+'</label><input id="ceDate" type="text" class="dtIn" readonly inputmode="none" dir="ltr" placeholder="YYYY-MM-DD" autocomplete="off" value="'+esc(v)+'" style="text-align:start">';
  else if(ty==='link')h='<label>'+t('value')+'</label><input id="ceLink" type="url" placeholder="'+t('linkPh')+'" value="'+esc(v)+'" style="direction:ltr;text-align:left">';
  else if(ty==='formula')h='<label>'+t('tFormula')+'</label><input id="ceFormula" type="text" class="mono" placeholder="'+t('formulaPh')+'" value="'+esc(v)+'" style="direction:ltr;text-align:left"><div class="small">A1, B2 ... '+t('formulaPh')+'</div>';
@@ -4514,7 +4526,7 @@ function openDash(){
    }}}
  var cards=[['statR',S.rows,t('stRows')],['statC',S.cols,t('stCols')],['statF',filled,t('stFilled')],['statP',Math.round(filled/(S.rows*S.cols)*100)+'%','%'],['statI',imgs,t('stImgs')],['statFi',files,t('stFiles')],['statA',auds,t('stAudio')],['statFx',formulas,'∑'],['statSt',ratings,'⭐']];
  var h='';
- for(var i=0;i<cards.length;i++)h+='<div class="statCard"><div class="n">'+cards[i][1]+'</div><div class="l">'+cards[i][2]+'</div></div>';
+ for(var i=0;i<cards.length;i++)h+='<div class="statCard"><div class="n num" lang="en" dir="ltr">'+cards[i][1]+'</div><div class="l">'+cards[i][2]+'</div></div>';
  $('dashCards').innerHTML=h;
  $('dashModal').hidden=false;
  setTimeout(function(){
@@ -4904,7 +4916,7 @@ function renderTrialBadge(){
  var dl=trialDaysLeft();
  b.style.display='';
  b.className='';
- b.textContent=t('trialLeft')+' '+Math.max(0,dl)+' '+t('days');
+ b.innerHTML=esc(t('trialLeft'))+' <span lang="en" dir="ltr" class="num">'+Math.max(0,dl)+'</span> '+esc(t('days'));
 }
 function openActivation(blocking){
  var plans=[['planW','3$'],['planM','9$'],['planY','49$'],['planL','99$']];
@@ -5070,7 +5082,7 @@ function renderAll(){
  applyTheme();
  applyStepperColors();
  $('rowCount').value=S.rows;$('colCount').value=S.cols;
- $('sizePill').textContent=S.rows+'×'+S.cols;
+ $('sizePill').innerHTML='<span lang="en" dir="ltr" class="num">'+S.rows+'×'+S.cols+'</span>';
  $('totalsToggle').checked=S.totalsOn;
  $('totalsColToggle').checked=S.totalsColOn;
  renderHdr();
