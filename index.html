@@ -5070,12 +5070,21 @@ function renderTrialBadge(){
 function licMsg(code){
  return {bad:pL('كود غير صحيح','Invalid code'),off:pL('الكود غير مفعّل أو موقوف','This code is not active'),used:pL('هذا الكود مستخدم على جهاز آخر. تواصل مع البائع','This code is used on another device. Contact the seller'),denied:pL('تعذر التفعيل، تواصل مع الدعم','Could not activate, contact support'),net:pL('تعذر الاتصال بالإنترنت، جرب مرة أخرى','No internet connection, try again')}[code]||'';
 }
-function licNormCode(v){return String(v||'').toUpperCase().replace(/\s+/g,'');}
+function licNormCode(v){return String(v||'').replace(/\s+/g,'');}
+function licCodeOk(c){return c.length>=4&&c.length<=100&&c!=='.'&&c!=='..'&&!/[\/\u0000-\u001f]/.test(c);}
+function licGetCode(c){
+ return licFetch('/codes/'+encodeURIComponent(c)).then(function(r){
+  var u=c.toUpperCase();
+  if(r.status===404&&u!==c)return licFetch('/codes/'+encodeURIComponent(u)).then(function(r2){return {code:u,r:r2};});
+  return {code:c,r:r};
+ });
+}
 function licFinish(code,days,act){LIC.code=code;LIC.days=days;LIC.act=act;LIC.lastOk=licNow();licVerified=true;licSave();return {ok:true};}
 function licActivate(raw){
  var code=licNormCode(raw);
- if(!/^[A-Z0-9][A-Z0-9-]{5,62}$/.test(code))return Promise.resolve({ok:false,msg:'bad'});
- return licFetch('/codes/'+encodeURIComponent(code)).then(function(r){
+ if(!licCodeOk(code))return Promise.resolve({ok:false,msg:'bad'});
+ return licGetCode(code).then(function(x){
+  var r=x.r;code=x.code;
   if(r.status===404)return {ok:false,msg:'bad'};
   if(r.status!==200)return {ok:false,msg:r.status===403?'denied':'net'};
   var f=r.json.fields||{},dv=fStr(f,'deviceId'),days=fNum(f,'days');
@@ -5161,9 +5170,9 @@ function bootLocked(){
  };
  var tryOwner=function(){
   var oc=licNormCode($('ownInput').value);
-  if(!/^[A-Z0-9][A-Z0-9-]{5,62}$/.test(oc)){$('lockErr').textContent=t('ownerBad');$('ownInput').value='';return;}
+  if(!licCodeOk(oc)){$('lockErr').textContent=t('ownerBad');$('ownInput').value='';return;}
   $('lockErr').textContent='...';
-  licFetch('/codes/'+encodeURIComponent(oc)).then(function(r){
+  licGetCode(oc).then(function(x){var r=x.r;
    var f=r.json.fields||{};
    if(r.status===200&&fStr(f,'plan')==='owner'&&fStr(f,'status')==='active'){
     S.lock={on:false,hash:''};save();
