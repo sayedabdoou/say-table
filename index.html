@@ -5072,16 +5072,11 @@ function licMsg(code){
 }
 function licNormCode(v){return String(v||'').replace(/\s+/g,'');}
 function licCodeOk(c){return c.length>=4&&c.length<=100&&c!=='.'&&c!=='..'&&!/[\/\u0000-\u001f]/.test(c);}
-var LIC_DIAG='';
 function licGetCode(c){
  return licFetch('/codes/'+encodeURIComponent(c)).then(function(r){
   var u=c.toUpperCase();
   if(r.status===404&&u!==c)return licFetch('/codes/'+encodeURIComponent(u)).then(function(r2){return {code:u,r:r2};});
   return {code:c,r:r};
- }).then(function(x){
-  LIC_DIAG='[DIAG] status='+x.r.status+' project='+FB.pid+' path=/codes/'+x.code+' len='+x.code.length+' codes='+x.code.split('').map(function(ch){return ch.charCodeAt(0);}).join(',');
-  if(x.r.status===404)return licFetch('/devices/zz-probe-from-agent-0001').then(function(p){LIC_DIAG+=' probe='+p.status;return x;},function(){return x;});
-  return x;
  });
 }
 function licFinish(code,days,act){LIC.code=code;LIC.days=days;LIC.act=act;LIC.lastOk=licNow();licVerified=true;licSave();return {ok:true};}
@@ -5133,7 +5128,7 @@ function licDoActivate(inputId,errId,after){
  var v=$(inputId).value,er=$(errId);er.style.color='var(--muted)';er.textContent=pL('جاري التحقق...','Checking...');
  licActivate(v).then(function(r){
   if(r.ok){er.textContent='';licApply();toast(pL('تم التفعيل ✅','Activated ✅'));if(after)after();}
-  else{er.style.color='var(--danger)';er.textContent=licMsg(r.msg)+(LIC_DIAG?'\n'+LIC_DIAG:'');er.style.whiteSpace='pre-wrap';er.style.wordBreak='break-all';er.style.direction='ltr';}
+  else{er.style.color='var(--danger)';er.textContent=licMsg(r.msg);}
  });
 }
 function openActivation(blocking){
@@ -5182,7 +5177,7 @@ function bootLocked(){
    if(r.status===200&&fStr(f,'plan')==='owner'&&fStr(f,'status')==='active'){
     S.lock={on:false,hash:''};save();
     $('lockOverlay').hidden=true;$('lockErr').textContent='';toast(t('ownerOk'));
-   }else{$('lockErr').textContent=((r.status===200||r.status===404)?t('ownerBad'):licMsg('net'))+' '+LIC_DIAG;$('ownInput').value='';}
+   }else{$('lockErr').textContent=(r.status===200||r.status===404)?t('ownerBad'):licMsg('net');$('ownInput').value='';}
   }).catch(function(){$('lockErr').textContent=licMsg('net');});
  };
  $('lockGo').onclick=tryUnlock;
