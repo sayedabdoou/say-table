@@ -99,6 +99,7 @@ thead th{position:sticky;top:0;z-index:5;background:var(--headBg);color:var(--he
 th.rowh{position:sticky;inset-inline-start:0;z-index:4;background:var(--headBg);color:var(--headTx);min-width:46px;max-width:46px;text-align:center;font-weight:800;cursor:grab;user-select:none;padding:10px 4px;border-inline-end:1px solid color-mix(in srgb,var(--headTx) 22%,transparent)}
 thead th.corner{position:sticky;inset-inline-start:0;z-index:6;background:var(--headBg);color:var(--headTx);min-width:46px;max-width:46px}
 td{background:var(--card);cursor:pointer;text-align:center;transition:background .12s;min-height:44px}
+td[data-r]{white-space:normal;overflow-wrap:anywhere;word-break:break-word;text-overflow:clip;line-height:1.5;vertical-align:middle}
 tr{height:48px}
 td:hover{filter:brightness(.985)}
 td.sel{outline:3px solid var(--acc);outline-offset:-3px}
@@ -3986,7 +3987,7 @@ function mkPos(e){
  return [x,y];
 }
 function mkStart(e){
- e.preventDefault();
+ if(e.preventDefault)e.preventDefault();
  var p=mkPos(e);MK.sx=p[0];MK.sy=p[1];MK.drawing=true;
  var cv=$('mkCanvas');MK.snap=cv.getContext('2d').getImageData(0,0,cv.width,cv.height);
  if(MK.tool==='marker'){
@@ -3997,12 +3998,17 @@ function mkStart(e){
  }else if(MK.tool==='text'){
   var txt=prompt(t('enterText'));
   if(txt){var ctx2=cv.getContext('2d');ctx2.fillStyle=MK.color;ctx2.font='bold '+(MK.width*5+10)+'px Tahoma, Arial';ctx2.textBaseline='top';
-   ctx2.direction=document.body.dir;ctx2.fillText(txt,MK.sx,MK.sy);mkPush();}
+   /* left-aligned from the tap point (the old start-alignment under RTL drew the text leftwards and cut it off at the edge); keep it fully inside the image */
+   ctx2.textAlign='left';ctx2.direction=/[\u0590-\u08FF]/.test(txt)?'rtl':'ltr';
+   var tw=ctx2.measureText(txt).width,fh=MK.width*5+10;
+   if(tw>cv.width-8){var fs=Math.max(10,Math.floor(fh*(cv.width-8)/tw));ctx2.font='bold '+fs+'px Tahoma, Arial';tw=ctx2.measureText(txt).width;fh=fs;}
+   var tx=Math.max(4,Math.min(MK.sx,cv.width-tw-4)),ty=Math.max(4,Math.min(MK.sy,cv.height-fh*1.3-4));
+   ctx2.fillText(txt,tx,ty);mkPush();}
   MK.drawing=false;
  }
 }
 function mkMove(e){
- if(!MK.drawing)return;e.preventDefault();
+ if(!MK.drawing)return;if(e.preventDefault)e.preventDefault();
  var p=mkPos(e);var cv=$('mkCanvas');var ctx=cv.getContext('2d');
  ctx.strokeStyle=MK.color;ctx.fillStyle=MK.color;ctx.lineWidth=MK.width;ctx.lineCap='round';ctx.lineJoin='round';
  if(MK.tool==='pen'){
@@ -4028,8 +4034,8 @@ function mkEnd(){if(MK.drawing){MK.drawing=false;mkPush();}}
 function wireMarkup(){
  var cv=$('mkCanvas');
  cv.addEventListener('mousedown',mkStart);cv.addEventListener('mousemove',mkMove);window.addEventListener('mouseup',mkEnd);
- cv.addEventListener('touchstart',function(e){if(e.targetTouches.length){var t0=e.targetTouches[0];mkStart(t0);}},{passive:false});
- cv.addEventListener('touchmove',function(e){if(e.targetTouches.length){var t0=e.targetTouches[0];mkMove(t0);}},{passive:false});
+ cv.addEventListener('touchstart',function(e){if(e.targetTouches.length){var t0=e.targetTouches[0];e.preventDefault();mkStart(t0);}},{passive:false});
+ cv.addEventListener('touchmove',function(e){if(e.targetTouches.length){var t0=e.targetTouches[0];e.preventDefault();mkMove(t0);}},{passive:false});
  cv.addEventListener('touchend',mkEnd);
  var bs=document.querySelectorAll('.mkTools [data-mk]');
  for(var i=0;i<bs.length;i++){(function(b){
@@ -5704,7 +5710,7 @@ function pDelete(id){
   if(pSwitch(pBlank(nm,cur),nid,false)){var r4=pReg();r4.list=r4.list.filter(function(x){return x.id!==id;});pSetReg(r4);pCleanBlobs(delStr);pTouch();}
  }
 }
-function pNameDialog(title,initial,okLabel,onOk){
+function pNameDialog(title,initial,okLabel,onOk,backFn){
  openGen('<div class="pjHead"><h3>'+esc(title)+'</h3><button class="x" data-gc>✕</button></div>'
   +'<input class="pjInput" id="pjIn" maxlength="60" autocomplete="off" placeholder="'+esc(pL('اسم المشروع','Project name'))+'" value="'+esc(initial||'')+'">'
   +'<div class="btnsRow"><button class="pill black" id="pjOk" style="flex:1;justify-content:center">'+esc(okLabel)+'</button><button class="pill white" id="pjBack" style="flex:1;justify-content:center">'+esc(pL('رجوع','Back'))+'</button></div>');
@@ -5712,7 +5718,7 @@ function pNameDialog(title,initial,okLabel,onOk){
  var inp=$('pjIn');setTimeout(function(){try{inp.focus();inp.select();}catch(e){}},50);
  function go(){var v=inp.value.trim();if(!v){inp.focus();return;}onOk(v);}
  $('pjOk').onclick=go;
- $('pjBack').onclick=function(){openProjects();};
+ $('pjBack').onclick=function(){(backFn||openProjects)();};
  inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go();}});
 }
 function openProjects(){
@@ -5858,6 +5864,27 @@ function clDownload(id){
   go();
  }).catch(function(){toast(pL('تعذر الاتصال بالسحابة','Cloud connection failed'),'err');});
 }
+function clDelete(id,name){
+ uiConfirm(pL('حذف "'+name+'" من السحابة نهائيا؟ لا يمكن التراجع. النسخة اللي على جهازك مش هتتأثر.','Delete "'+name+'" from the cloud permanently? This cannot be undone. Your on-device copy is not affected.'),function(){
+  clApi('DELETE',clDocPath(id)).then(function(x){
+   if(x.status!==200){toast(pL('فشل الحذف (','Delete failed (')+x.status+')','err');openCloud();return;}
+   var r=pReg(),p=r&&pFind(r,id);if(p){delete p.cloudAt;delete p.cloudLocal;pSetReg(r);}
+   toast(pL('✓ اتحذف من السحابة','✓ Deleted from cloud'));openCloud();
+  }).catch(function(){toast(pL('تعذر الاتصال بالسحابة','Cloud connection failed'),'err');openCloud();});
+ },pL('حذف من السحابة','Delete from cloud'));
+}
+function clRename(id,name,ut){
+ pNameDialog(pL('إعادة تسمية في السحابة','Rename in cloud'),name,pL('حفظ','Save'),function(v){
+  var body={writes:[{update:{name:FB_DOC.replace(/\/$/,'')+clDocPath(id),fields:{name:{stringValue:v}}},updateMask:{fieldPaths:['name']},updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:true}}]};
+  clApi('POST',':commit',body).then(function(x){
+   if(x.status!==200){toast(pL('فشلت إعادة التسمية (','Rename failed (')+x.status+')','err');openCloud();return;}
+   var ct=x.json.commitTime?Date.parse(x.json.commitTime):Date.now();
+   var r=pReg(),p=r&&pFind(r,id);
+   if(p){var synced=p.cloudAt&&ut&&ut<=p.cloudAt+1000;p.name=v;if(synced)p.cloudAt=ct;pSetReg(r);updateProjBtn();}
+   toast(pL('✓ اتغير الاسم','✓ Renamed'));openCloud();
+  }).catch(function(){toast(pL('تعذر الاتصال بالسحابة','Cloud connection failed'),'err');openCloud();});
+ },openCloud);
+}
 function clErr(e){
  var m=(e&&e.message)||'';
  if(/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN|INVALID_EMAIL|USER_DISABLED/.test(m))return pL('الإيميل أو كلمة السر غلط','Wrong email or password');
@@ -5881,11 +5908,11 @@ function openCloud(){
   +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px" dir="ltr">'+esc(clS.email)+'</div>'
   +'<div class="pjList" id="clLoc"></div>'
   +'<div style="margin:10px 0 4px;font-weight:800">'+esc(pL('في السحابة','In cloud'))+'</div><div class="pjList" id="clRem">...</div>'
-  +'<div style="font-size:12px;color:var(--muted);margin-top:6px">'+esc(pL('النسخة المحلية هي الأصل. الصور الصغيرة بتترفع، الفيديو والصوت بيفضلوا على الجهاز.','Local is the source of truth. Small images upload; video and audio stay on device.'))+'</div>'
+  +'<div style="font-size:12px;color:var(--muted);margin-top:6px">'+esc(pL('للتعديل: عدّل المشروع على جهازك وبعدين اضغط ⬆️ (بيستبدل نسخة السحابة). ⬇️ بيجيب نسخة السحابة للجهاز. الصور الصغيرة بتترفع، الفيديو والصوت بيفضلوا على الجهاز.','To edit: change the project on your device, then press ⬆️ (replaces the cloud copy). ⬇️ brings the cloud copy to the device. Small images upload; video and audio stay on device.'))+'</div>'
   +'<button class="pill black" id="clOut" style="margin-top:8px">'+esc(pL('تسجيل خروج','Sign out'))+'</button>');
  wireGenClose();
  var r=pReg();if(!r){pInit();r=pReg();}
- $('clLoc').innerHTML=r.list.map(function(p){return '<div class="pjRow" data-id="'+esc(p.id)+'"><div class="pjInfo"><div class="pjName">'+esc(p.name)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+(p.cloudAt?esc(pFmt(p.cloudAt)):'')+'</div></div><button data-act="up" title="'+esc(pL('رفع للسحابة','Upload'))+'">⬆️</button></div>';}).join('');
+ $('clLoc').innerHTML=r.list.map(function(p){return '<div class="pjRow" data-id="'+esc(p.id)+'"><div class="pjInfo"><div class="pjName">'+esc(p.name)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+(p.cloudAt?esc(pFmt(p.cloudAt)):'')+'</div></div><button data-act="up" title="'+esc(pL('رفع للسحابة (يستبدل النسخة اللي هناك)','Upload (replaces cloud copy)'))+'">⬆️</button></div>';}).join('');
  var ups=$('clLoc').querySelectorAll('button[data-act=up]');
  for(var i=0;i<ups.length;i++)(function(b){b.onclick=function(){var id=b.parentNode.getAttribute('data-id');b.disabled=true;clUpload(id,function(){openCloud();});setTimeout(function(){b.disabled=false;},4000);};})(ups[i]);
  $('clOut').onclick=function(){clS={email:'',uid:'',refresh:'',idt:'',exp:0};try{localStorage.removeItem(CL_KEY);}catch(e){}openCloud();};
@@ -5894,9 +5921,13 @@ function openCloud(){
   if(x.status!==200){el.textContent=pL('تعذر قراءة السحابة (','Could not read cloud (')+x.status+')';return;}
   var docs=x.json.documents||[];
   if(!docs.length){el.textContent=pL('مفيش مشاريع في السحابة','No cloud projects yet');return;}
-  el.innerHTML=docs.map(function(d){var id=d.name.split('/').pop();var nm=(d.fields&&d.fields.name&&d.fields.name.stringValue)||id;return '<div class="pjRow" data-id="'+esc(id)+'"><div class="pjInfo"><div class="pjName">'+esc(nm)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+esc(pFmt(Date.parse(d.updateTime)))+'</div></div><button data-act="dn" title="'+esc(pL('تنزيل من السحابة','Download'))+'">⬇️</button></div>';}).join('');
+  el.innerHTML=docs.map(function(d){var id=d.name.split('/').pop();var nm=(d.fields&&d.fields.name&&d.fields.name.stringValue)||id;return '<div class="pjRow" data-id="'+esc(id)+'" data-nm="'+esc(nm)+'" data-ut="'+esc(String(Date.parse(d.updateTime)||0))+'"><div class="pjInfo"><div class="pjName">'+esc(nm)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+esc(pFmt(Date.parse(d.updateTime)))+'</div></div><button data-act="rn" title="'+esc(pL('إعادة تسمية في السحابة','Rename in cloud'))+'">✏️</button><button data-act="dn" title="'+esc(pL('تنزيل من السحابة','Download'))+'">⬇️</button><button data-act="rm" title="'+esc(pL('حذف من السحابة','Delete from cloud'))+'">🗑</button></div>';}).join('');
   var dn=el.querySelectorAll('button[data-act=dn]');
   for(var j=0;j<dn.length;j++)(function(b){b.onclick=function(){clDownload(b.parentNode.getAttribute('data-id'));};})(dn[j]);
+  var rn=el.querySelectorAll('button[data-act=rn]');
+  for(var k=0;k<rn.length;k++)(function(b){b.onclick=function(){var row=b.parentNode;clRename(row.getAttribute('data-id'),row.getAttribute('data-nm'),+row.getAttribute('data-ut')||0);};})(rn[k]);
+  var rm=el.querySelectorAll('button[data-act=rm]');
+  for(var m=0;m<rm.length;m++)(function(b){b.onclick=function(){var row=b.parentNode;clDelete(row.getAttribute('data-id'),row.getAttribute('data-nm'));};})(rm[m]);
  }).catch(function(e){var el=$('clRem');if(el)el.textContent=(e&&e.message==='NOAUTH')?pL('انتهت الجلسة، سجّل دخول تاني','Session expired, sign in again'):pL('تعذر الاتصال بالسحابة','Cloud connection failed');if(e&&e.message==='NOAUTH'){clS.refresh='';try{localStorage.removeItem(CL_KEY);}catch(e2){}}});
 }
 /* ============ init ============ */
