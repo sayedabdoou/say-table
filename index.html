@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" dir="rtl">
+<html lang="ar-u-nu-latn" dir="rtl" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta http-equiv="Content-Language" content="ar">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
@@ -292,6 +294,51 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 #dpCard .dpGrid button.sel{background:#111;color:#fff}
 #dpCard .dpGrid button.tod{outline:2px solid #1da64e}
 #dpCard .dpFt{display:flex;gap:6px;margin-top:10px;justify-content:space-between}
+
+/* ===== v14 compact top area + stars ===== */
+.stars{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.starsInput{display:flex;justify-content:center;direction:ltr;letter-spacing:0;gap:4px}
+.starsInput .stp{display:inline-block;padding:2px 5px;line-height:1}
+#appHeader{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;padding:6px 10px 2px}
+.titleRow{display:contents}
+.titleRow .gearRow{position:static;order:3}
+.brand{order:1;font-size:17px;gap:.3em}
+.brand .pro{font-size:9px;padding:2px 7px}
+.mainPills{order:2;gap:5px;flex-wrap:nowrap}
+.searchRow{order:4;flex:1 1 230px;gap:6px;flex-wrap:nowrap;justify-content:flex-start;min-width:0}
+.pill{padding:6px 12px;font-size:12px;gap:5px}
+.pill.round{width:32px;height:32px;font-size:12px}
+.iconPill{width:32px;height:32px;font-size:13px}
+.viewSwitch{padding:2px}
+.viewSwitch button{padding:4px 10px;font-size:12px}
+.searchBox{max-width:none;min-width:90px}
+.searchBox input{padding:6px 12px;padding-inline-start:32px;font-size:12.5px}
+#toolbar{padding:2px 10px 4px;gap:5px}
+#toolbar .pill{padding:6px 11px;font-size:12px}
+#gridCtl{padding:0 10px 4px;gap:6px}
+.ctlRow{gap:6px}.ctlGroup{gap:6px}
+.stepper{padding:2px 4px}
+.stepper button{width:24px;height:24px;font-size:15px}
+.stepper .lbl{font-size:12px;padding:0 3px}
+.stepper input{width:34px;font-size:13px}
+.sizePill{padding:4px 10px;font-size:11.5px}
+.tglWrap{padding:4px 10px;font-size:12px}
+#tipBanner{margin:0 10px 4px;padding:5px 10px;font-size:11.5px;border-radius:12px;line-height:1.35}
+#projHdr{gap:2px 8px;padding:0 10px 4px}
+#projHdr .ph{flex:1 1 110px;gap:0}
+#projHdr label{font-size:10px;padding:0 10px;line-height:1.2}
+#projHdr input{padding:1px 10px;font-size:13px}
+#tipBanner{align-items:center}#tipBanner>span:nth-child(2){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tableWrap{padding:0 6px}
+@media(max-width:640px){
+ #appHeader{padding:4px 8px 2px;gap:4px 6px}
+ .brand{font-size:15px}
+ .mainPills{gap:4px;flex-wrap:wrap;justify-content:center}
+ .searchRow{flex:1 1 100%}
+ .pill{padding:5px 10px;font-size:11.5px}
+ #toolbar .pill{padding:5px 9px;font-size:11.5px}
+ #projHdr .ph{flex:1 1 44%}
+}
 </style>
 </head>
 <body>
@@ -3235,6 +3282,17 @@ document.addEventListener('click',function(e){var el=e.target.closest&&e.target.
 document.addEventListener('keydown',function(e){if(pop&&!pop.hidden&&e.key==='Escape'){e.stopPropagation();close();}},true);
 document.addEventListener('keydown',function(e){var el=e.target;if(el&&el.classList&&el.classList.contains('dtIn')&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(el);}});
 })();
+
+/* ===== fit table height to the screen ===== */
+(function(){
+function fit(){var w=document.getElementById('tableWrap');if(!w||w.offsetParent===null)return;
+ var top=w.getBoundingClientRect().top+(window.pageYOffset||0);
+ var h=Math.max(240,window.innerHeight-top-8);w.style.maxHeight=h+'px';}
+window.addEventListener('resize',fit);window.addEventListener('orientationchange',function(){setTimeout(fit,200);});
+document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load',function(){fit();setTimeout(fit,600);});
+if(window.ResizeObserver){var ro=new ResizeObserver(fit);['appHeader','toolbar','gridCtl','tipBanner','projHdr'].forEach(function(id){var e=document.getElementById(id);if(e)ro.observe(e);});}
+window.fitTable=fit;
+})();
 function fixDigitInputs(root){var l=(root||document).querySelectorAll('input[type=date],input[type=number],input[type=time],input[type=month],input[type=datetime-local]');for(var i=0;i<l.length;i++)if(l[i].getAttribute('lang')!=='en-US')l[i].setAttribute('lang','en-US');}
 function swapCells(a,b){pushHist();var tmp=S.data[a[0]][a[1]];S.data[a[0]][a[1]]=S.data[b[0]][b[1]];S.data[b[0]][b[1]]=tmp;toast(t('swapped'));renderAll();}
 function guardedSwap(a,b){
@@ -3585,8 +3643,8 @@ function wireCEBody(){
   mark();
  }else if(ty==='rating'){
   var st=$('ceStars');
-  var draw=function(){var s='';for(var i=1;i<=5;i++)s+=i<=CE.rating?'★':'☆';st.textContent=s;};
-  st.onclick=function(e){var rect=st.getBoundingClientRect();var x=e.clientX-rect.left;var n=Math.ceil((x/rect.width)*5);CE.rating=Math.max(1,Math.min(5,n));draw();};
+  var draw=function(){var s='';for(var i=1;i<=5;i++)s+='<span class="stp" data-n="'+i+'">'+(i<=CE.rating?'★':'☆')+'</span>';st.innerHTML=s;};
+  st.onclick=function(e){var el=e.target.closest?e.target.closest('.stp'):null;if(!el)return;var n=parseInt(el.getAttribute('data-n'),10);CE.rating=n;draw();};
   draw();
  }else if(ty==='select'){
   renderSelOpts();
@@ -4688,7 +4746,7 @@ function prepHtmlImgs(){
 }
 function exportHTML(){
  prepHtmlImgs().then(function(map){
- var html='<!DOCTYPE html><html lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
+ var html='<!DOCTYPE html><html lang="'+(S.lang==='ar'?'ar-u-nu-latn':'en')+'" translate="no" class="notranslate" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
  +'<style>body{font-family:Tahoma,Arial,sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:7px;font-size:13px}th{background:#eef2ff}.rn{background:#f5f5f5;color:#888}</style></head><body>'
  +'<h2>'+esc(S.hdr.name||'SAY TABLE PRO')+'</h2>'+hdrHTML()+styledTableHTML(map)+'</body></html>';
  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),'say-table-pro.html');
@@ -4698,7 +4756,7 @@ function exportHTML(){
 function exportPDF(){
  var w=window.open('','_blank');
  prepHtmlImgs().then(function(map){
- var html='<!DOCTYPE html><html lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
+ var html='<!DOCTYPE html><html lang="'+(S.lang==='ar'?'ar-u-nu-latn':'en')+'" translate="no" class="notranslate" dir="'+(S.lang==='ar'?'rtl':'ltr')+'"><head><meta charset="UTF-8"><title>SAY TABLE PRO</title>'
  +'<style>@page{margin:12mm}body{font-family:Tahoma,Arial,sans-serif}h2{margin:0 0 4px}.d{color:#888;font-size:12px;margin-bottom:10px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px;font-size:11.5px}th{background:#eef2ff}.rn{background:#f5f5f5;color:#888}td{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>'
  +'<h2>'+esc(S.hdr.name||'SAY TABLE PRO')+'</h2><div class="d">'+new Date().toLocaleString(S.lang==='ar'?'ar-u-nu-latn':'en')+'</div>'
  +hdrHTML()+styledTableHTML(map)
@@ -4827,7 +4885,7 @@ function applyTheme(){
  if(mc)mc.setAttribute('content',S.theme==='dark'?'#101312':'#ffffff');
 }
 function applyLang(){
- document.documentElement.lang='en';
+ document.documentElement.lang=(S.lang==='ar'?'ar-u-nu-latn':'en');document.documentElement.setAttribute('translate','no');document.documentElement.classList.add('notranslate');
  document.body.dir=S.lang==='ar'?'rtl':'ltr';
  var els=document.querySelectorAll('[data-i18n]');
  for(var i=0;i<els.length;i++)els[i].textContent=t(els[i].getAttribute('data-i18n'));
@@ -5073,7 +5131,12 @@ if(S.lock.on)bootLocked();
 else if(!S.trial.activated&&trialDaysLeft()<0)openActivation(true);
 if(updateBackupDot())setTimeout(function(){toast(t('backupWarn'),'warn');},1500);
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
- try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}
+ try{navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.ready.then(function(){
+   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+   try{if(!localStorage.getItem('stOfflineReady')){localStorage.setItem('stOfflineReady','1');setTimeout(function(){toast(LL('✅ التطبيق جاهز يشتغل من غير إنترنت','✅ The app is ready to work offline'));},2500);}}catch(e){}
+  }).catch(function(){});
+ }catch(e){}
 }
 })();
 
