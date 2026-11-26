@@ -277,6 +277,20 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 .modalCard{padding:16px}
 #statusBar{font-size:11px;padding:8px 16px;gap:9px}
 }
+
+.dtIn{cursor:pointer;direction:ltr}
+#dpPop{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+#dpPop[hidden]{display:none}
+#dpCard{background:#fff;color:#111;border-radius:18px;padding:14px;width:min(320px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.4);direction:ltr;font-family:inherit}
+#dpCard .dpHd{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+#dpCard .dpHd b{flex:1;text-align:center;font-size:15px}
+#dpCard button{font:inherit;border:0;border-radius:10px;background:#eee;color:#111;cursor:pointer;padding:6px 10px;min-width:34px}
+#dpCard .dpGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+#dpCard .dpGrid span{font-size:11px;color:#777;padding:4px 0}
+#dpCard .dpGrid button{padding:8px 0;background:#f5f5f5}
+#dpCard .dpGrid button.sel{background:#111;color:#fff}
+#dpCard .dpGrid button.tod{outline:2px solid #1da64e}
+#dpCard .dpFt{display:flex;gap:6px;margin-top:10px;justify-content:space-between}
 </style>
 </head>
 <body>
@@ -360,7 +374,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 
 <div id="projHdr">
   <div class="ph"><label for="hdrName" data-i18n="hdrName">اسم المشروع</label><input id="hdrName" type="text" data-i18n-ph="hdrNamePh" placeholder="اسم المشروع" autocomplete="off"></div>
-  <div class="ph"><label for="hdrDate" data-i18n="hdrDate">التاريخ</label><input id="hdrDate" type="date"></div>
+  <div class="ph"><label for="hdrDate" data-i18n="hdrDate">التاريخ</label><input id="hdrDate" type="text" class="dtIn" readonly inputmode="none" dir="ltr" placeholder="YYYY-MM-DD" autocomplete="off"></div>
   <div class="ph"><label for="hdrDept" data-i18n="hdrDept">الإدارة</label><input id="hdrDept" type="text" data-i18n-ph="hdrDeptPh" placeholder="الإدارة" autocomplete="off"></div>
   <div class="ph"><label for="hdrPerson" data-i18n="hdrPerson">الاسم</label><input id="hdrPerson" type="text" data-i18n-ph="hdrPersonPh" placeholder="الاسم" autocomplete="off"></div>
   <div class="ph"><label for="hdrAddr" data-i18n="hdrAddr">العنوان</label><input id="hdrAddr" type="text" data-i18n-ph="hdrAddrPh" placeholder="العنوان" autocomplete="off"></div>
@@ -3187,9 +3201,43 @@ function cellHTML(cell,r,c){
  }
 }
 function enDigits(x){return typeof x==='string'?x.replace(/[\u0660-\u0669]/g,function(d){return String(d.charCodeAt(0)-0x660);}).replace(/[\u06F0-\u06F9]/g,function(d){return String(d.charCodeAt(0)-0x6F0);}):x;}
+/* ===== custom date picker (always Latin digits) ===== */
+(function(){
+var pop=null,cur=null,vy=0,vm=0;
+function p2(n){return (n<10?'0':'')+n;}
+function parse(v){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(enDigits(v||''));return m?[+m[1],+m[2]-1,+m[3]]:null;}
+function build(){pop=document.createElement('div');pop.id='dpPop';pop.hidden=true;pop.innerHTML='<div id="dpCard"></div>';document.body.appendChild(pop);
+ pop.addEventListener('click',function(e){if(e.target===pop)close();});}
+function close(){if(pop)pop.hidden=true;cur=null;}
+function setVal(v){if(!cur)return;cur.value=v;cur.dispatchEvent(new Event('input',{bubbles:true}));cur.dispatchEvent(new Event('change',{bubbles:true}));close();}
+function draw(){
+ var ar=(S.lang==='ar');
+ var mn=ar?['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']:['January','February','March','April','May','June','July','August','September','October','November','December'];
+ var wd=ar?['ح','ن','ث','ر','خ','ج','س']:['Su','Mo','Tu','We','Th','Fr','Sa'];
+ var sel=parse(cur.value),now=new Date();
+ var first=new Date(vy,vm,1).getDay(),dim=new Date(vy,vm+1,0).getDate();
+ var h='<div class="dpHd"><button data-d="-12">«</button><button data-d="-1">‹</button><b>'+mn[vm]+' '+vy+'</b><button data-d="1">›</button><button data-d="12">»</button></div><div class="dpGrid">';
+ for(var i=0;i<7;i++)h+='<span>'+wd[i]+'</span>';
+ for(i=0;i<first;i++)h+='<span></span>';
+ for(var d=1;d<=dim;d++){var c='';if(sel&&sel[0]===vy&&sel[1]===vm&&sel[2]===d)c+=' sel';if(now.getFullYear()===vy&&now.getMonth()===vm&&now.getDate()===d)c+=' tod';h+='<button data-day="'+d+'" class="'+c+'">'+d+'</button>';}
+ h+='</div><div class="dpFt"><button data-act="today">'+(ar?'اليوم':'Today')+'</button><button data-act="clear">'+(ar?'مسح':'Clear')+'</button><button data-act="close">'+(ar?'إغلاق':'Close')+'</button></div>';
+ var card=pop.firstChild;card.innerHTML=h;
+ card.onclick=function(e){var b=e.target.closest('button');if(!b)return;e.stopPropagation();
+  if(b.dataset.d){var t=vy*12+vm+(+b.dataset.d);vy=Math.floor(t/12);vm=t%12;draw();}
+  else if(b.dataset.day)setVal(vy+'-'+p2(vm+1)+'-'+p2(+b.dataset.day));
+  else if(b.dataset.act==='today'){var n=new Date();setVal(n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate()));}
+  else if(b.dataset.act==='clear')setVal('');
+  else if(b.dataset.act==='close')close();};
+}
+function open(inp){if(!pop)build();cur=inp;var s=parse(inp.value),n=new Date();vy=s?s[0]:n.getFullYear();vm=s?s[1]:n.getMonth();draw();pop.hidden=false;}
+document.addEventListener('click',function(e){var el=e.target.closest&&e.target.closest('input.dtIn');if(el){e.preventDefault();open(el);}},true);
+document.addEventListener('keydown',function(e){if(pop&&!pop.hidden&&e.key==='Escape'){e.stopPropagation();close();}},true);
+document.addEventListener('keydown',function(e){var el=e.target;if(el&&el.classList&&el.classList.contains('dtIn')&&(e.key==='Enter'||e.key===' ')){e.preventDefault();open(el);}});
+})();
 function fixDigitInputs(root){var l=(root||document).querySelectorAll('input[type=date],input[type=number],input[type=time],input[type=month],input[type=datetime-local]');for(var i=0;i<l.length;i++)if(l[i].getAttribute('lang')!=='en-US')l[i].setAttribute('lang','en-US');}
 function swapCells(a,b){pushHist();var tmp=S.data[a[0]][a[1]];S.data[a[0]][a[1]]=S.data[b[0]][b[1]];S.data[b[0]][b[1]]=tmp;toast(t('swapped'));renderAll();}
 function guardedSwap(a,b){
+ if((S.colMeta[a[1]]&&S.colMeta[a[1]].autoNum)||(S.colMeta[b[1]]&&S.colMeta[b[1]].autoNum)){toast(LL('عمود الرقم التلقائي بيعرض رقم الصف بس، فمينفعش تنقل منه أو إليه. ألغِ الرقم التلقائي الأول لو عايز تنقل المحتوى','An auto-number column only shows row numbers, so cells can\'t be moved to or from it. Turn auto-number off first to move content'),'err');return;}
  if(!cellHasData(S.data[b[0]][b[1]])){swapCells(a,b);return;}
  var an=colName(a[1])+(a[0]+1),bn=colName(b[1])+(b[0]+1);
  var extra=(S.colMeta[a[1]].autoNum||S.colMeta[b[1]].autoNum)?LL(' (أحد العمودين رقم تلقائي، فالمحتوى يتبدل في البيانات حتى لو العرض رقم الصف)',' (one of the columns is auto-number, so the content is swapped in the data even though the display shows row numbers)'):'';
@@ -3467,7 +3515,7 @@ function renderCEBody(){
  var b=$('ceBody');var cell=S.data[CE.r][CE.c];var v=cell.v;var ty=CE.type;var h='';
  if(ty==='text')h='<label>'+t('value')+'</label><textarea id="ceText" rows="3">'+esc(v)+'</textarea>';
  else if(ty==='number')h='<label>'+t('value')+'</label><input id="ceNum" type="number" value="'+esc(v)+'">';
- else if(ty==='date')h='<label>'+t('value')+'</label><input id="ceDate" type="date" value="'+esc(v)+'" style="text-align:start">';
+ else if(ty==='date')h='<label>'+t('value')+'</label><input id="ceDate" type="text" class="dtIn" readonly inputmode="none" dir="ltr" placeholder="YYYY-MM-DD" autocomplete="off" value="'+esc(v)+'" style="text-align:start">';
  else if(ty==='link')h='<label>'+t('value')+'</label><input id="ceLink" type="url" placeholder="'+t('linkPh')+'" value="'+esc(v)+'" style="direction:ltr;text-align:left">';
  else if(ty==='formula')h='<label>'+t('tFormula')+'</label><input id="ceFormula" type="text" class="mono" placeholder="'+t('formulaPh')+'" value="'+esc(v)+'" style="direction:ltr;text-align:left"><div class="small">A1, B2 ... '+t('formulaPh')+'</div>';
  else if(ty==='calc'){
