@@ -395,6 +395,11 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 #toolbar .viewSwitch{padding:2px;align-items:center}
 #toolbar .viewSwitch button{padding:5px 12px;font-size:12px}
 #tipBanner{justify-content:center;text-align:center}
+#tbRate{padding:6px 11px;font-size:15px;line-height:1;border-radius:999px;border:1.5px solid #f5b301;background:var(--card);color:#f5b301;cursor:pointer}
+#tbRate[hidden]{display:none}
+#tbRate.pulse{animation:rateGlow 1.4s ease-in-out infinite}
+@keyframes rateGlow{0%,100%{box-shadow:0 0 0 0 rgba(245,179,1,0);transform:scale(1);background:var(--card)}50%{box-shadow:0 0 14px 4px rgba(245,179,1,.75);transform:scale(1.14);background:#fff3c4}}
+@media (prefers-reduced-motion:reduce){#tbRate.pulse{animation:none;box-shadow:0 0 10px 3px rgba(245,179,1,.7)}}
 #tipBanner>span:nth-child(2){text-align:center}
 #tipBanner button{margin-inline-start:0}
 </style>
@@ -458,6 +463,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 
 <div id="toolbar">
   <button class="pill black" id="tbForm">🧾 <span data-i18n="form">نموذج إدخال</span></button>
+  <button id="tbRate" type="button" title="قيّم التطبيق" aria-label="قيّم التطبيق">⭐</button>
   <div class="viewSwitch">
     <button id="viewTable" class="on" data-i18n="vTable">جدول</button>
     <button id="viewKanban" data-i18n="vKanban">بطاقات</button>
@@ -5161,7 +5167,8 @@ function openActivation(blocking){
 /* ---- app rating (feedback) ---- */
 var FBK='say_fb_v1';
 function fbLoad(){try{return JSON.parse(localStorage.getItem(FBK)||'{}')||{};}catch(e){return {};}}
-function fbSave(o){if(window.__so)return;try{localStorage.setItem(FBK,JSON.stringify(o));}catch(e){}}
+function fbSave(o){if(window.__so)return;try{localStorage.setItem(FBK,JSON.stringify(o));}catch(e){}fbBtn();}
+function fbBtn(){var b=document.getElementById('tbRate');if(!b)return;var o=fbLoad();b.hidden=!!o.sent;b.classList.toggle('pulse',!o.sent&&!o.q&&!o.rating);}
 function fbSend(){
  var o=fbLoad();if(!o.q||o.sent||!LIC.dev)return Promise.resolve(false);
  var f={rating:{integerValue:String(o.q.rating)}};
@@ -5228,6 +5235,7 @@ function licBoot(){
  $('licExpXlsx').onclick=function(){exportXLSX();};
  $('licExpPdf').onclick=function(){exportPDF();};
  licApply();licSync();
+ var rtT=document.getElementById('tbRate');if(rtT){rtT.onclick=openRating;rtT.title=pL('قيّم التطبيق','Rate the app');}fbBtn();
  window.addEventListener('online',licSync);
  document.addEventListener('visibilitychange',function(){if(!document.hidden){licTick();licApply();licSync();}});
  if(licTimer)clearInterval(licTimer);
@@ -5285,8 +5293,6 @@ function openSettings(){
    :'<div class="small" style="margin-bottom:6px">'+t('pwOff2')+'</div><input type="password" id="pwSet" placeholder="'+t('pwSet')+'"><div class="btnsRow"><button class="pill black" id="pwSetGo" style="flex:1;justify-content:center">'+t('pwSet')+'</button></div>')
   +'<div class="small">'+t('pwCosmetic')+'</div>'
   +'<label style="margin-top:14px">🙈 '+t('hiddenCols')+'</label><div>'+(hidList||'<span class="small">'+t('none')+'</span>')+'</div>'
-  +'<label style="margin-top:14px">⭐ '+pL('قيّم التطبيق','Rate the app')+'</label>'
-  +'<div class="btnsRow"><button class="pill white" id="setRate" style="flex:1;justify-content:center">'+pL('أعطِ تقييمك','Give your rating')+'</button></div>'
   +'<label style="margin-top:14px">🚪 '+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</label>'
   +'<div class="btnsRow"><button class="pill white" id="setSignOut" style="flex:1;justify-content:center;color:var(--danger)">'+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</button></div>'
   +'<div class="btnsRow" style="margin-top:18px"><button class="pill green" id="setBackup" style="flex:1;justify-content:center">💾 '+t('asBackup')+'</button></div>');
