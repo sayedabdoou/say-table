@@ -397,6 +397,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 #tipBanner{justify-content:center;text-align:center}
 #tbRate{padding:6px 11px;font-size:15px;line-height:1;border-radius:999px;border:1.5px solid #f5b301;background:var(--card);color:#f5b301;cursor:pointer}
 #tbRate[hidden]{display:none}
+body.ratingOpen #toast{display:none}
 #tbRate.pulse{animation:rateGlow 1.4s ease-in-out infinite}
 @keyframes rateGlow{0%,100%{box-shadow:0 0 0 0 rgba(245,179,1,0);transform:scale(1);background:var(--card)}50%{box-shadow:0 0 14px 4px rgba(245,179,1,.75);transform:scale(1.14);background:#fff3c4}}
 @media (prefers-reduced-motion:reduce){#tbRate.pulse{animation:none;box-shadow:0 0 10px 3px rgba(245,179,1,.7)}}
@@ -5235,7 +5236,16 @@ function licBoot(){
  $('licExpXlsx').onclick=function(){exportXLSX();};
  $('licExpPdf').onclick=function(){exportPDF();};
  licApply();licSync();
- var rtT=document.getElementById('tbRate');if(rtT){rtT.onclick=openRating;rtT.title=pL('قيّم التطبيق','Rate the app');}fbBtn();
+ var rtT=document.getElementById('tbRate');if(rtT){rtT.onclick=function(){
+  var bad=function(){document.body.classList.remove('ratingOpen');try{toast(pL('تعذر فتح التقييم. حدّث الصفحة (Ctrl+Shift+R) وجرّب تاني.','Could not open the rating. Refresh the page (Ctrl+Shift+R) and try again.'));}catch(e2){}};
+  try{
+   document.body.classList.add('ratingOpen');
+   openRating();
+   var gm=$('genModal');
+   if(!gm||gm.hidden||!$('fbGo')&&!$('fbStars')&&!document.querySelector('#genCard h3')){bad();return;}
+   if(!gm.__rw&&window.MutationObserver){gm.__rw=new MutationObserver(function(){if(gm.hidden)document.body.classList.remove('ratingOpen');});gm.__rw.observe(gm,{attributes:true,attributeFilter:['hidden']});}
+  }catch(e){bad();}
+ };rtT.title=pL('قيّم التطبيق','Rate the app');}fbBtn();
  window.addEventListener('online',licSync);
  document.addEventListener('visibilitychange',function(){if(!document.hidden){licTick();licApply();licSync();}});
  if(licTimer)clearInterval(licTimer);
