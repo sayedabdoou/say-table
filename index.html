@@ -409,6 +409,42 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 @media (prefers-reduced-motion:reduce){.rateStars.pulse button{animation:none;text-shadow:0 0 6px rgba(245,179,1,.8)}}
 #tipBanner>span:nth-child(2){text-align:center}
 #tipBanner button{margin-inline-start:0}
+
+/* ===== v27 mobile compact + focus mode ===== */
+#hdrHandle{display:none}
+@media(max-width:640px){
+ .titleRow .gearRow{order:1}
+ .sizePill{display:none}
+ #appHeader{padding:3px 6px 0;gap:3px 5px}
+ .brand{font-size:13.5px}
+ .brand .pro{font-size:8px;padding:1px 6px}
+ .rateStars button{font-size:12px;padding:0 2px}
+ .rateStars{margin-top:-3px}
+ .pill{padding:4px 9px;font-size:11px;gap:4px}
+ .pill.round{width:26px;height:26px;font-size:10.5px}
+ .iconPill{width:26px;height:26px;font-size:11.5px}
+ .iconPill .bdg{width:8px;height:8px}
+ .mainPills{gap:3px}
+ .searchBox input{padding:4px 10px;padding-inline-start:28px;font-size:12px}
+ #trialBadge{font-size:10px;padding:3px 9px}
+ #toolbar{padding:1px 6px 2px;gap:4px}
+ #toolbar .pill{padding:4px 8px;font-size:11px}
+ #toolbar .viewSwitch button{padding:3px 9px;font-size:11px}
+ #gridCtl{padding:0 6px 2px;gap:4px}
+ .ctlRow{gap:4px}.ctlGroup{gap:4px}
+ .stepper{padding:1px 3px}
+ .stepper button{width:20px;height:20px;font-size:13px}
+ .stepper .lbl{font-size:11px;padding:0 2px}
+ .stepper input{width:28px;font-size:12px}
+ .tglWrap{padding:3px 8px;font-size:11px;gap:4px}
+ #tipBanner{margin:0 6px 3px;padding:3px 8px;font-size:10.5px}
+ #projHdr{padding:0 6px 3px}
+ #projHdr label{font-size:9.5px}
+ #projHdr input{font-size:12px;padding:0 9px}
+ body.mCollapsed #appHeader,body.mCollapsed #toolbar,body.mCollapsed #gridCtl,body.mCollapsed #tipBanner,body.mCollapsed #projHdr{display:none!important}
+ body.mCollapsed #hdrHandle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:22px;border:0;background:var(--ink);color:var(--onink);font-size:11px;font-weight:800;cursor:pointer;padding:0}
+ body.mCollapsed #tableWrap{max-height:calc(100vh - 26px);max-height:calc(100dvh - 26px)}
+}
 </style>
 </head>
 <body>
@@ -512,6 +548,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
   <div class="ph"><label for="hdrAddr" data-i18n="hdrAddr">العنوان</label><input id="hdrAddr" type="text" data-i18n-ph="hdrAddrPh" placeholder="العنوان" autocomplete="off"></div>
 </div>
 
+<button id="hdrHandle" type="button">⌄ <span id="hdrHandleTx">القائمة</span></button>
 <div id="tableWrap"><table id="mainTable"></table></div>
 
 <div id="kanbanWrap" hidden>
@@ -5269,6 +5306,31 @@ function licBoot(){
    openRateN(parseInt(hit.getAttribute('data-n'),10));
   },true);}
  fbBtn();
+ (function(){
+  var mq=window.matchMedia?window.matchMedia('(max-width:640px)'):{matches:false};
+  var tw=$('tableWrap'),hd=$('hdrHandle'),last=0,col=false;
+  if(!tw||!hd)return;
+  $('hdrHandleTx').textContent=pL('القائمة','Menu');
+  function setC(c){col=c;document.body.classList.toggle('mCollapsed',!!(c&&mq.matches));if(c)try{window.scrollTo(0,0);}catch(e){}}
+  function can(){
+   if(!mq.matches||tw.offsetParent===null)return false;
+   if(document.querySelector('.overlay:not([hidden])'))return false;
+   var l=$('licLock');if(l&&!l.hidden)return false;
+   var a=document.activeElement;if(a&&a.closest&&a.closest('#appHeader,#projHdr,#gridCtl,#toolbar'))return false;
+   return true;
+  }
+  tw.addEventListener('scroll',function(){
+   var st=tw.scrollTop;
+   if(!col&&st>40&&st>last+6&&can())setC(true);
+   else if(col&&st<=0&&last>st)setC(false);
+   last=st;
+  },{passive:true});
+  tw.addEventListener('click',function(e){
+   if(!col&&e.target.closest&&e.target.closest('td')&&can())setC(true);
+  });
+  hd.onclick=function(){setC(false);try{window.scrollTo(0,0);}catch(e){}};
+  if(mq.addEventListener)mq.addEventListener('change',function(){if(!mq.matches)document.body.classList.remove('mCollapsed');else if(col)document.body.classList.add('mCollapsed');});
+ })();
  window.addEventListener('online',licSync);
  document.addEventListener('visibilitychange',function(){if(!document.hidden){licTick();licApply();licSync();}});
  if(licTimer)clearInterval(licTimer);
@@ -5434,7 +5496,7 @@ function renderAll(){
  applyTheme();
  applyStepperColors();
  $('rowCount').value=S.rows;$('colCount').value=S.cols;
- $('sizePill').innerHTML='<span lang="en" dir="ltr" class="num">'+S.rows+'×'+S.cols+'</span>';
+ var spl=$('sizePill');if(spl)spl.innerHTML='<span lang="en" dir="ltr" class="num">'+S.rows+'×'+S.cols+'</span>';
  $('totalsToggle').checked=S.totalsOn;
  $('totalsColToggle').checked=S.totalsColOn;
  renderHdr();
@@ -5653,7 +5715,7 @@ renderAll();
 if(migrated)toast(t('restoredOld'));
 if(S.lock.on)bootLocked();
 licBoot();
-if(updateBackupDot())setTimeout(function(){toast(t('backupWarn'),'warn');},1500);
+updateBackupDot();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
  try{navigator.serviceWorker.register('sw.js').catch(function(){});
   navigator.serviceWorker.ready.then(function(){
