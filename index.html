@@ -5728,8 +5728,10 @@ function openProjects(){
  }).join('');
  openGen('<div class="pjHead"><h3>📁 '+esc(pL('مشاريعي','My projects'))+'</h3><button class="x" data-gc>✕</button></div>'
   +'<div class="pjList">'+rows+'</div>'
-  +'<button class="pill green pjNew" id="pjNew">➕ '+esc(pL('مشروع جديد','New project'))+'</button>');
+  +'<button class="pill green pjNew" id="pjNew">➕ '+esc(pL('مشروع جديد','New project'))+'</button>'
+  +'<button class="pill black" id="pjCloud" style="margin-top:8px;width:100%">☁️ '+esc(pL('سحابة المالك','Owner cloud'))+'</button>');
  wireGenClose();
+ $('pjCloud').onclick=openCloud;
  $('pjNew').onclick=function(){pNameDialog(pL('مشروع جديد','New project'),'',pL('إنشاء','Create'),function(v){pNew(v);});};
  var rowsEl=document.querySelectorAll('.pjRow');
  for(var i=0;i<rowsEl.length;i++)(function(el){
@@ -5743,6 +5745,159 @@ function openProjects(){
    else uiConfirm(pL('حذف المشروع "'+p.name+'" نهائيا؟ لا يمكن التراجع.','Delete project "'+p.name+'" permanently? This cannot be undone.'),function(){pDelete(id);openProjects();},pL('حذف المشروع','Delete project'));
   };
  })(rowsEl[i]);
+}
+/* ============ owner cloud sync (Firebase Auth email/password + Firestore ownerData) ============ */
+var CL={auth:'https://identitytoolkit.googleapis.com',tok:'https://securetoken.googleapis.com'};
+var CL_KEY='say_cloud_v1',CL_MAXC=900000,CL_MAXB=1000000,CL_IMG=300000;
+var clS={email:'',uid:'',refresh:'',idt:'',exp:0};
+try{var _c=JSON.parse(localStorage.getItem(CL_KEY)||'{}');if(_c&&_c.refresh){clS.email=_c.email||'';clS.uid=_c.uid||'';clS.refresh=_c.refresh;}}catch(e){}
+function clSave(){try{localStorage.setItem(CL_KEY,JSON.stringify({email:clS.email,uid:clS.uid,refresh:clS.refresh}));}catch(e){}}
+function clPost(url,body,form){
+ return fetch(url,{method:'POST',headers:{'Content-Type':form?'application/x-www-form-urlencoded':'application/json'},body:form?body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {status:r.status,json:j};});});
+}
+function clLogin(email,pw){
+ return clPost(CL.auth+'/v1/accounts:signInWithPassword?key='+FB.key,{email:email,password:pw,returnSecureToken:true}).then(function(x){
+  if(x.status!==200||!x.json.idToken){var m=(x.json.error&&x.json.error.message)||'';throw new Error(m||'login');}
+  clS={email:email,uid:x.json.localId,refresh:x.json.refreshToken,idt:x.json.idToken,exp:Date.now()+(+x.json.expiresIn||3600)*1000};clSave();return clS;});
+}
+function clTok(){
+ if(clS.idt&&clS.exp>Date.now()+60000)return Promise.resolve(clS.idt);
+ if(!clS.refresh)return Promise.reject(new Error('NOAUTH'));
+ return clPost(CL.tok+'/v1/token?key='+FB.key,'grant_type=refresh_token&refresh_token='+encodeURIComponent(clS.refresh),true).then(function(x){
+  if(x.status!==200||!x.json.id_token)throw new Error('NOAUTH');
+  clS.idt=x.json.id_token;clS.refresh=x.json.refresh_token||clS.refresh;clS.exp=Date.now()+(+x.json.expires_in||3600)*1000;clSave();return clS.idt;});
+}
+function clApi(method,path,body){
+ return clTok().then(function(tk){
+  return fetch(FB_BASE+path,{method:method,headers:{'Authorization':'Bearer '+tk,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {status:r.status,json:j};},function(){return {status:r.status,json:{}};});});
+ });
+}
+function clDocPath(id){return '/ownerData/'+clS.uid+'/projects/'+id;}
+function clLocalObj(id){
+ var r=pReg();if(!r)return null;
+ var str;
+ if(id===r.active){save();str=localStorage.getItem(KEY);}else str=localStorage.getItem(PPFX+id);
+ if(!str)return null;
+ var o;try{o=JSON.parse(str);}catch(e){return null;}
+ PGLOBAL.forEach(function(k){delete o[k];});
+ return o;
+}
+function clCollectMedia(o){
+ var ids={};
+ for(var r=0;r<o.data.length;r++)for(var c=0;c<o.data[r].length;c++){var cell=o.data[r][c];var v=cell&&cell.v;if(typeof v==='string'&&isIdbRef(v))ids[idbId(v)]=true;}
+ var list=Object.keys(ids);var att={},skipped=0,total=0;
+ return list.reduce(function(p,id){return p.then(function(){
+  return idb.get(id).then(function(rec){
+   if(!rec){skipped++;return;}
+   var isImg=/^image\//.test(rec.mime||'');
+   if(!isImg||rec.blob.size>CL_IMG||total+rec.blob.size>500000){skipped++;return;}
+   return blobToDataURL(rec.blob).then(function(du){att[id]={name:rec.name,mime:rec.mime,data:du};total+=rec.blob.size;});
+  });});},Promise.resolve()).then(function(){return {att:att,skipped:skipped,count:list.length};});
+}
+function clUpload(id,done){
+ var o=clLocalObj(id);if(!o){toast(pL('المشروع غير موجود','Project not found'),'err');return;}
+ var r=pReg(),p=pFind(r,id);
+ clCollectMedia(o).then(function(m){
+  if(Object.keys(m.att).length)o.attachments=m.att;
+  var str=JSON.stringify(o);
+  if(str.length>CL_MAXC||new Blob([str]).size>CL_MAXB){toast(pL('المشروع كبير جدا للسحابة (الحد حوالي 900KB). صدّر نسخة JSON بدلا منها.','Project too large for cloud (~900KB). Export JSON instead.'),'err');return;}
+  function go(){
+   var name=(p&&p.name)||'Project';
+   var body={writes:[{update:{name:FB_DOC.replace(/\/$/,'')+clDocPath(id),fields:{name:{stringValue:name},data:{stringValue:str},deviceId:{stringValue:LIC.dev||''},rows:{integerValue:String(o.rows||0)},cols:{integerValue:String(o.cols||0)}}},updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}]}]};
+   clApi('POST',':commit',body).then(function(x){
+    if(x.status!==200){toast(pL('فشل الرفع (','Upload failed (')+x.status+')','err');return;}
+    var ct=x.json.commitTime?Date.parse(x.json.commitTime):Date.now();
+    var r2=pReg(),p2=pFind(r2,id);if(p2){p2.cloudAt=ct;p2.cloudLocal=p2.updated;pSetReg(r2);}
+    toast(pL('✓ اتحفظ في السحابة','✓ Saved to cloud')+(m.skipped?pL(' (الوسائط الكبيرة/الفيديو/الصوت فضلت على الجهاز فقط: ',' (large media/video/audio stayed local: ')+m.skipped+')':''),m.skipped?'warn':'');
+    if(done)done();
+   }).catch(function(e){toast(pL('تعذر الاتصال بالسحابة','Cloud connection failed'),'err');});
+  }
+  clApi('GET',clDocPath(id)+'?mask.fieldPaths=updatedAt').then(function(x){
+   if(x.status===200){
+    var ut=Date.parse(x.json.updateTime||0)||0;
+    if(p&&p.cloudAt&&ut>p.cloudAt+1000){uiConfirm(pL('النسخة في السحابة اتعدلت بعد آخر مزامنة (يمكن من جهاز تاني). تستبدلها بنسختك المحلية؟','The cloud copy changed since your last sync (maybe from another device). Overwrite it with your local copy?'),go,pL('تعارض','Conflict'));return;}
+    if(p&&!p.cloudAt){uiConfirm(pL('فيه مشروع بنفس المعرّف في السحابة. تستبدله بنسختك المحلية؟','A cloud project with this ID exists. Overwrite it with your local copy?'),go,pL('تعارض','Conflict'));return;}
+   }
+   go();
+  });
+ });
+}
+function clApplyRemote(id,name,str,ct){
+ var o;try{o=JSON.parse(str);}catch(e){toast(pL('بيانات السحابة تالفة','Cloud data corrupted'),'err');return;}
+ if(!o||!o.data||!o.data.length){toast(pL('بيانات السحابة تالفة','Cloud data corrupted'),'err');return;}
+ var atts=o.attachments||{};delete o.attachments;
+ var ids=Object.keys(atts),n=0;
+ function after(){
+  var r=pReg();if(!r){pInit();r=pReg();}
+  var p=pFind(r,id);
+  if(id===r.active){
+   if(!pSwitch(o,id,false))return;
+   r=pReg();p=pFind(r,id);
+  }else{
+   try{localStorage.setItem(PPFX+id,JSON.stringify(o));}catch(e){toast(pL('المساحة ممتلئة','Storage full'),'err');return;}
+   if(!p){p={id:id,name:name,updated:Date.now()};r.list.push(p);}
+  }
+  p.name=name;p.cloudAt=ct;p.updated=Date.now();p.cloudLocal=p.updated;pSetReg(r);updateProjBtn();
+  toast(pL('✓ اتنزّل من السحابة','✓ Downloaded from cloud'));
+  $('genModal').hidden=true;
+ }
+ if(!ids.length){after();return;}
+ ids.forEach(function(k){var a=atts[k];try{idb.put(k,dataURLToBlob(a.data),a.name,a.mime).then(function(){if(++n>=ids.length)after();}).catch(function(){if(++n>=ids.length)after();});}catch(e){if(++n>=ids.length)after();}});
+}
+function clDownload(id){
+ clApi('GET',clDocPath(id)).then(function(x){
+  if(x.status!==200){toast(pL('تعذر تنزيل المشروع (','Download failed (')+x.status+')','err');return;}
+  var f=x.json.fields||{};var str=(f.data&&f.data.stringValue)||'';var name=(f.name&&f.name.stringValue)||'Project';
+  var ct=Date.parse(x.json.updateTime||0)||Date.now();
+  var r=pReg(),p=r&&pFind(r,id);
+  function go(){clApplyRemote(id,name,str,ct);}
+  if(p){
+   var changedLocal=!p.cloudAt||p.updated>(p.cloudLocal||0)+1000;
+   if(changedLocal){uiConfirm(pL('نسختك المحلية فيها تعديلات لسه ما اترفعتش. تستبدلها بنسخة السحابة؟','Your local copy has changes not uploaded yet. Replace it with the cloud copy?'),go,pL('تعارض','Conflict'));return;}
+  }
+  go();
+ }).catch(function(){toast(pL('تعذر الاتصال بالسحابة','Cloud connection failed'),'err');});
+}
+function clErr(e){
+ var m=(e&&e.message)||'';
+ if(/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN|INVALID_EMAIL|USER_DISABLED/.test(m))return pL('الإيميل أو كلمة السر غلط','Wrong email or password');
+ if(/TOO_MANY/.test(m))return pL('محاولات كتير، استنى شوية','Too many attempts, wait a bit');
+ return pL('تعذر الاتصال بالسحابة','Cloud connection failed');
+}
+function openCloud(){
+ if(!clS.refresh){
+  openGen('<div class="pjHead"><h3>☁️ '+esc(pL('سحابة المالك','Owner cloud'))+'</h3><button class="x" data-gc>✕</button></div>'
+   +'<div style="display:flex;flex-direction:column;gap:8px"><input id="clEmail" type="email" autocomplete="username" dir="ltr" placeholder="Email" style="padding:10px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--text)">'
+   +'<input id="clPw" type="password" autocomplete="current-password" dir="ltr" placeholder="'+esc(pL('كلمة السر','Password'))+'" style="padding:10px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--text)">'
+   +'<div id="clMsg" style="color:var(--danger);font-size:13px;min-height:18px"></div>'
+   +'<button class="pill green" id="clGo">'+esc(pL('دخول','Sign in'))+'</button></div>');
+  wireGenClose();
+  var go=function(){var em=$('clEmail').value.trim(),pw=$('clPw').value;if(!em||!pw)return;$('clMsg').textContent='...';
+   clLogin(em,pw).then(function(){openCloud();}).catch(function(e){$('clMsg').textContent=clErr(e);$('clPw').value='';});};
+  $('clGo').onclick=go;$('clPw').onkeydown=function(e){if(e.key==='Enter')go();};
+  return;
+ }
+ openGen('<div class="pjHead"><h3>☁️ '+esc(pL('سحابة المالك','Owner cloud'))+'</h3><button class="x" data-gc>✕</button></div>'
+  +'<div style="font-size:12px;color:var(--muted);margin-bottom:6px" dir="ltr">'+esc(clS.email)+'</div>'
+  +'<div class="pjList" id="clLoc"></div>'
+  +'<div style="margin:10px 0 4px;font-weight:800">'+esc(pL('في السحابة','In cloud'))+'</div><div class="pjList" id="clRem">...</div>'
+  +'<div style="font-size:12px;color:var(--muted);margin-top:6px">'+esc(pL('النسخة المحلية هي الأصل. الصور الصغيرة بتترفع، الفيديو والصوت بيفضلوا على الجهاز.','Local is the source of truth. Small images upload; video and audio stay on device.'))+'</div>'
+  +'<button class="pill black" id="clOut" style="margin-top:8px">'+esc(pL('تسجيل خروج','Sign out'))+'</button>');
+ wireGenClose();
+ var r=pReg();if(!r){pInit();r=pReg();}
+ $('clLoc').innerHTML=r.list.map(function(p){return '<div class="pjRow" data-id="'+esc(p.id)+'"><div class="pjInfo"><div class="pjName">'+esc(p.name)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+(p.cloudAt?esc(pFmt(p.cloudAt)):'')+'</div></div><button data-act="up" title="'+esc(pL('رفع للسحابة','Upload'))+'">⬆️</button></div>';}).join('');
+ var ups=$('clLoc').querySelectorAll('button[data-act=up]');
+ for(var i=0;i<ups.length;i++)(function(b){b.onclick=function(){var id=b.parentNode.getAttribute('data-id');b.disabled=true;clUpload(id,function(){openCloud();});setTimeout(function(){b.disabled=false;},4000);};})(ups[i]);
+ $('clOut').onclick=function(){clS={email:'',uid:'',refresh:'',idt:'',exp:0};try{localStorage.removeItem(CL_KEY);}catch(e){}openCloud();};
+ clApi('GET','/ownerData/'+clS.uid+'/projects?pageSize=100&mask.fieldPaths=name&mask.fieldPaths=rows&mask.fieldPaths=cols').then(function(x){
+  var el=$('clRem');if(!el)return;
+  if(x.status!==200){el.textContent=pL('تعذر قراءة السحابة (','Could not read cloud (')+x.status+')';return;}
+  var docs=x.json.documents||[];
+  if(!docs.length){el.textContent=pL('مفيش مشاريع في السحابة','No cloud projects yet');return;}
+  el.innerHTML=docs.map(function(d){var id=d.name.split('/').pop();var nm=(d.fields&&d.fields.name&&d.fields.name.stringValue)||id;return '<div class="pjRow" data-id="'+esc(id)+'"><div class="pjInfo"><div class="pjName">'+esc(nm)+'</div><div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+esc(pFmt(Date.parse(d.updateTime)))+'</div></div><button data-act="dn" title="'+esc(pL('تنزيل من السحابة','Download'))+'">⬇️</button></div>';}).join('');
+  var dn=el.querySelectorAll('button[data-act=dn]');
+  for(var j=0;j<dn.length;j++)(function(b){b.onclick=function(){clDownload(b.parentNode.getAttribute('data-id'));};})(dn[j]);
+ }).catch(function(e){var el=$('clRem');if(el)el.textContent=(e&&e.message==='NOAUTH')?pL('انتهت الجلسة، سجّل دخول تاني','Session expired, sign in again'):pL('تعذر الاتصال بالسحابة','Cloud connection failed');if(e&&e.message==='NOAUTH'){clS.refresh='';try{localStorage.removeItem(CL_KEY);}catch(e2){}}});
 }
 /* ============ init ============ */
 document.addEventListener('input',function(e){var el=e.target;if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;var ty=(el.type||'text').toLowerCase();if(ty==='password'||ty==='file'||ty==='color'||ty==='checkbox'||ty==='radio'||ty==='range')return;var v=el.value;if(typeof v!=='string')return;var n=enDigits(v);if(n!==v){var p=null;try{p=el.selectionStart;}catch(x){}el.value=n;try{if(p!==null)el.setSelectionRange(p,p);}catch(x){}}},true);
