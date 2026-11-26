@@ -343,6 +343,24 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 /* ===== v16 forced latin digits ===== */
 .num,.stepper input,.mono,#projHdr input.dtIn,#dpCard,.sizePill,.statCard .n{font-family:'LatinDigits',Arial,Helvetica,sans-serif;font-variant-numeric:lining-nums;unicode-bidi:isolate}
 .stepper input{unicode-bidi:plaintext}
+
+#projBtn{max-width:190px;padding:9px 16px}
+#projBtn .pn{overflow:hidden;text-overflow:ellipsis;max-width:120px;display:inline-block;vertical-align:bottom}
+.pjHead{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
+.pjHead h3{margin:0;font-size:19px}
+.pjHead .x{border:0;background:transparent;font-size:18px;cursor:pointer;color:var(--text);opacity:.6}
+.pjList{display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;margin:0 0 14px}
+.pjRow{display:flex;align-items:center;gap:6px;padding:10px 12px;border:1.5px solid var(--border);border-radius:16px;background:var(--card);cursor:pointer}
+.pjRow:active{transform:scale(.99)}
+.pjRow.on{border-color:var(--acc);background:rgba(120,200,120,.10)}
+.pjRow .pjInfo{flex:1;min-width:0}
+.pjRow .pjName{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pjRow .pjSub{font-size:11.5px;opacity:.6;margin-top:2px}
+.pjRow .pjOn{font-size:11px;font-weight:800;color:var(--acc);margin-inline-start:4px}
+.pjRow button{border:0;background:transparent;font-size:17px;cursor:pointer;padding:6px;border-radius:10px;opacity:.7}
+.pjRow button:hover{opacity:1;background:rgba(128,128,128,.15)}
+.pjNew{width:100%;justify-content:center}
+.pjInput{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;margin:6px 0 14px;background:var(--card);color:var(--text)}
 </style>
 </head>
 <body>
@@ -369,6 +387,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
     </div>
   </div>
   <div class="mainPills">
+    <button class="pill white" id="projBtn" title="مشاريعي">📁 <span class="pn"></span> ▾</button>
     <button class="pill green" id="tbImport">⬆️ <span data-i18n="import">استيراد</span></button>
     <button class="pill black" id="tbExport">⬇️ <span data-i18n="export">تصدير</span></button>
     <button class="pill black round" id="langBtn" title="Language">EN</button>
@@ -2993,7 +3012,7 @@ function normalizeCell(x){
 function normHdr(h){h=h||{};return {name:String(h.name||''),date:String(h.date||''),dept:String(h.dept||''),person:String(h.person||''),addr:String(h.addr||'')};}
 function hdrRows(){var h=S.hdr;return [[t('hdrName'),h.name||''],[t('hdrDate'),h.date||''],[t('hdrDept'),h.dept||''],[t('hdrPerson'),h.person||''],[t('hdrAddr'),h.addr||'']];}
 function hdrHTML(){var r=hdrRows();if(!r.length)return '';return '<div style="display:flex;gap:24px;flex-wrap:wrap;margin:0 0 12px;font-size:14px">'+r.map(function(x){return '<div><span style="color:#6b6f66;font-weight:700">'+esc(x[0])+':</span> <b>'+esc(x[1])+'</b></div>';}).join('')+'</div>';}
-function renderHdr(){$('hdrName').value=S.hdr.name;$('hdrDate').value=S.hdr.date;$('hdrDept').value=S.hdr.dept;$('hdrPerson').value=S.hdr.person;$('hdrAddr').value=S.hdr.addr;}
+function renderHdr(){try{updateProjBtn();}catch(e){}$('hdrName').value=S.hdr.name;$('hdrDate').value=S.hdr.date;$('hdrDept').value=S.hdr.dept;$('hdrPerson').value=S.hdr.person;$('hdrAddr').value=S.hdr.addr;}
 function load(){
  var migrated=false;
  try{
@@ -3030,7 +3049,8 @@ function save(){
   localStorage.setItem(KEY,JSON.stringify({v:2,rows:S.rows,cols:S.cols,data:S.data,colMeta:S.colMeta,condFmt:S.condFmt,
    filters:S.filters,sort:S.sort,theme:S.theme,lang:S.lang,lock:S.lock,trial:S.trial,lastBackup:S.lastBackup,
    totalsOn:S.totalsOn,totalsColOn:S.totalsColOn,totalsAgg:S.totalsAgg,hdr:S.hdr,hdrColColor:S.hdrColColor,hdrRowColor:S.hdrRowColor}));
- }catch(e){toast(t('idbErr'),'err');}
+ }catch(e){toast(t('idbErr'),'err');return;}
+ try{pTouch();}catch(e2){}
 }
 /* ============ history (undo/redo) ============ */
 function snap(){return JSON.stringify({rows:S.rows,cols:S.cols,data:S.data,colMeta:S.colMeta,condFmt:S.condFmt,filters:S.filters,sort:S.sort,totalsOn:S.totalsOn,totalsColOn:S.totalsColOn,totalsAgg:S.totalsAgg});}
@@ -5126,14 +5146,175 @@ function wireAll(){
  $('totalsToggle').onchange=function(){S.totalsOn=this.checked;save();renderTable();};
  $('totalsColToggle').onchange=function(){S.totalsColOn=this.checked;save();renderTable();};
  ['hdrName','hdrDate','hdrDept','hdrPerson','hdrAddr'].forEach(function(id){var k={hdrName:'name',hdrDate:'date',hdrDept:'dept',hdrPerson:'person',hdrAddr:'addr'}[id];$(id).addEventListener('input',function(){S.hdr[k]=this.value;save();});});
+ $('projBtn').onclick=openProjects;
  $('tipClose').onclick=function(){$('tipBanner').style.display='none';};
  document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeMenu();}});
+}
+
+/* ============ project manager ============ */
+var PKEY='say_table_projects_v1', PPFX='say_table_proj_';
+var PGLOBAL=['lang','theme','lock','trial','lastBackup'];
+function pL(a,e){return S.lang==='ar'?a:e;}
+function pid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function pReg(){try{var r=JSON.parse(localStorage.getItem(PKEY));if(r&&r.list&&r.list.length&&r.active)return r;}catch(e){}return null;}
+function pSetReg(r){localStorage.setItem(PKEY,JSON.stringify(r));}
+function pInit(){
+ if(pReg())return;
+ var id=pid();
+ try{pSetReg({active:id,list:[{id:id,name:(S.hdr.name||'').trim()||pL('مشروعي','My project'),updated:Date.now()}]});}catch(e){}
+}
+function pFind(r,id){for(var i=0;i<r.list.length;i++)if(r.list[i].id===id)return r.list[i];return null;}
+function pTouch(){
+ var r=pReg();if(!r)return;
+ var p=pFind(r,r.active);if(!p)return;
+ p.updated=Date.now();
+ var n=(S.hdr.name||'').trim();if(n)p.name=n;
+ pSetReg(r);updateProjBtn();
+}
+function updateProjBtn(){
+ var b=$('projBtn');if(!b)return;
+ var r=pReg();var p=r&&pFind(r,r.active);
+ b.querySelector('.pn').textContent=p?p.name:pL('مشاريعي','Projects');
+ b.title=pL('مشاريعي','My projects');
+}
+function pFmt(ts){
+ var d=new Date(ts),z=function(n){return (n<10?'0':'')+n;};
+ return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'  '+z(d.getHours())+':'+z(d.getMinutes());
+}
+function pBlank(name,cur){
+ var o={v:2,rows:10,cols:10,data:[],colMeta:[],condFmt:[],filters:[],sort:null,totalsOn:false,totalsColOn:false,totalsAgg:{},
+  hdr:{name:name,date:'',dept:'',person:'',addr:''},hdrColColor:'',hdrRowColor:''};
+ PGLOBAL.forEach(function(k){if(cur[k]!==undefined)o[k]=cur[k];});
+ return o;
+}
+/* switch the open project: stash current (unless dropping it), write target into KEY, reload state */
+function pSwitch(targetObj,newActive,stashCurrent){
+ save();
+ var curStr=localStorage.getItem(KEY)||'{}';
+ var cur={};try{cur=JSON.parse(curStr);}catch(e){}
+ var r=pReg();if(!r){pInit();r=pReg();}
+ PGLOBAL.forEach(function(k){if(cur[k]!==undefined)targetObj[k]=cur[k];});
+ try{
+  if(stashCurrent)localStorage.setItem(PPFX+r.active,curStr);
+  localStorage.setItem(KEY,JSON.stringify(targetObj));
+ }catch(e){
+  try{if(stashCurrent)localStorage.removeItem(PPFX+r.active);localStorage.setItem(KEY,curStr);}catch(e2){}
+  toast(pL('المساحة ممتلئة، تعذر التبديل','Storage full, could not switch'),'err');return false;
+ }
+ r.active=newActive;pSetReg(r);
+ load();hist=[snap()];histIdx=0;pendingSnap=null;SEL={r:0,c:0,r2:0,c2:0};
+ try{$('searchInput').value='';}catch(e){}
+ $('genModal').hidden=true;
+ setView('table');
+ updateUndoBtns();
+ return true;
+}
+function pOpen(id){
+ var r=pReg();if(!r||id===r.active){$('genModal').hidden=true;return;}
+ var str=localStorage.getItem(PPFX+id);if(!str){toast(pL('المشروع غير موجود','Project not found'),'err');return;}
+ var o;try{o=JSON.parse(str);}catch(e){toast(pL('بيانات المشروع تالفة','Project data is corrupted'),'err');return;}
+ var oldActive=r.active;
+ if(pSwitch(o,id,true)){try{localStorage.removeItem(PPFX+id);}catch(e){}pTouch();}
+}
+function pNew(name){
+ var r=pReg();var id=pid();
+ var cur={};try{cur=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
+ r.list.unshift({id:id,name:name,updated:Date.now()});
+ // register first; pSwitch re-reads registry, so write it then switch
+ pSetReg(r);
+ var prevActive=r.active;
+ var rr=pReg();rr.active=prevActive;pSetReg(rr);
+ if(!pSwitch(pBlank(name,cur),id,true)){var r2=pReg();r2.list=r2.list.filter(function(p){return p.id!==id;});pSetReg(r2);return;}
+ pTouch();
+}
+function pRename(id,name){
+ var r=pReg();var p=pFind(r,id);if(!p)return;
+ p.name=name;p.updated=Date.now();pSetReg(r);
+ if(id===r.active){S.hdr.name=name;renderHdr();save();}
+ else{try{var o=JSON.parse(localStorage.getItem(PPFX+id));o.hdr=o.hdr||{};o.hdr.name=name;localStorage.setItem(PPFX+id,JSON.stringify(o));}catch(e){}}
+ updateProjBtn();
+}
+function pCleanBlobs(deletedStr){
+ var ids=[],m,re=/idb:([A-Za-z0-9]+)/g;
+ while((m=re.exec(deletedStr)))if(ids.indexOf(m[1])<0)ids.push(m[1]);
+ if(!ids.length)return;
+ var others=[localStorage.getItem(KEY)||''];
+ var r=pReg();if(r)r.list.forEach(function(p){var x=localStorage.getItem(PPFX+p.id);if(x)others.push(x);});
+ var all=others.join('\n');
+ ids.forEach(function(id){if(all.indexOf('idb:'+id)<0){try{idb.del(id);delete idbUrlCache[id];}catch(e){}}});
+}
+function pDelete(id){
+ var r=pReg();var p=pFind(r,id);if(!p)return;
+ var delStr=(id===r.active)?(localStorage.getItem(KEY)||''):(localStorage.getItem(PPFX+id)||'');
+ r.list=r.list.filter(function(x){return x.id!==id;});
+ if(id!==r.active){
+  pSetReg(r);try{localStorage.removeItem(PPFX+id);}catch(e){}
+  pCleanBlobs(delStr);
+  return;
+ }
+ // deleting the open project: move to the most recent other one, or a fresh blank
+ var cur={};try{cur=JSON.parse(delStr);}catch(e){}
+ var next=null;r.list.slice().sort(function(a,b){return b.updated-a.updated;}).some(function(x){next=x;return true;});
+ if(next){
+  var str=localStorage.getItem(PPFX+next.id),o=null;try{o=JSON.parse(str);}catch(e){}
+  if(!o)o=pBlank(next.name,cur);
+  var oldList=r.list;
+  pSetReg({active:id,list:oldList.concat([p])});
+  if(pSwitch(o,next.id,false)){try{localStorage.removeItem(PPFX+next.id);}catch(e){}
+   var r3=pReg();r3.list=r3.list.filter(function(x){return x.id!==id;});pSetReg(r3);pCleanBlobs(delStr);pTouch();}
+  else pSetReg({active:id,list:oldList.concat([p])});
+ }else{
+  var nid=pid(),nm=pL('مشروع جديد','New project');
+  pSetReg({active:id,list:[p,{id:nid,name:nm,updated:Date.now()}]});
+  if(pSwitch(pBlank(nm,cur),nid,false)){var r4=pReg();r4.list=r4.list.filter(function(x){return x.id!==id;});pSetReg(r4);pCleanBlobs(delStr);pTouch();}
+ }
+}
+function pNameDialog(title,initial,okLabel,onOk){
+ openGen('<div class="pjHead"><h3>'+esc(title)+'</h3><button class="x" data-gc>✕</button></div>'
+  +'<input class="pjInput" id="pjIn" maxlength="60" autocomplete="off" placeholder="'+esc(pL('اسم المشروع','Project name'))+'" value="'+esc(initial||'')+'">'
+  +'<div class="btnsRow"><button class="pill black" id="pjOk" style="flex:1;justify-content:center">'+esc(okLabel)+'</button><button class="pill white" id="pjBack" style="flex:1;justify-content:center">'+esc(pL('رجوع','Back'))+'</button></div>');
+ wireGenClose();
+ var inp=$('pjIn');setTimeout(function(){try{inp.focus();inp.select();}catch(e){}},50);
+ function go(){var v=inp.value.trim();if(!v){inp.focus();return;}onOk(v);}
+ $('pjOk').onclick=go;
+ $('pjBack').onclick=function(){openProjects();};
+ inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go();}});
+}
+function openProjects(){
+ var r=pReg();if(!r){pInit();r=pReg();}
+ var list=r.list.slice().sort(function(a,b){return (a.id===r.active?-1:0)-(b.id===r.active?-1:0)||b.updated-a.updated;});
+ var rows=list.map(function(p){
+  var on=p.id===r.active;
+  return '<div class="pjRow'+(on?' on':'')+'" data-id="'+esc(p.id)+'">'
+   +'<div class="pjInfo"><div class="pjName">'+esc(p.name)+(on?'<span class="pjOn">'+esc(pL('مفتوح','Open'))+'</span>':'')+'</div>'
+   +'<div class="pjSub num" lang="en" dir="ltr" style="text-align:start">'+esc(pFmt(p.updated))+'</div></div>'
+   +'<button data-act="ren" title="'+esc(pL('إعادة تسمية','Rename'))+'">✏️</button>'
+   +'<button data-act="del" title="'+esc(pL('حذف','Delete'))+'">🗑</button></div>';
+ }).join('');
+ openGen('<div class="pjHead"><h3>📁 '+esc(pL('مشاريعي','My projects'))+'</h3><button class="x" data-gc>✕</button></div>'
+  +'<div class="pjList">'+rows+'</div>'
+  +'<button class="pill green pjNew" id="pjNew">➕ '+esc(pL('مشروع جديد','New project'))+'</button>');
+ wireGenClose();
+ $('pjNew').onclick=function(){pNameDialog(pL('مشروع جديد','New project'),'',pL('إنشاء','Create'),function(v){pNew(v);});};
+ var rowsEl=document.querySelectorAll('.pjRow');
+ for(var i=0;i<rowsEl.length;i++)(function(el){
+  var id=el.getAttribute('data-id');
+  el.onclick=function(e){
+   var a=e.target.closest&&e.target.closest('button');
+   if(!a){pOpen(id);return;}
+   e.stopPropagation();
+   var p=pFind(pReg(),id);
+   if(a.getAttribute('data-act')==='ren')pNameDialog(pL('إعادة تسمية','Rename'),p.name,pL('حفظ','Save'),function(v){pRename(id,v);openProjects();});
+   else uiConfirm(pL('حذف المشروع "'+p.name+'" نهائيا؟ لا يمكن التراجع.','Delete project "'+p.name+'" permanently? This cannot be undone.'),function(){pDelete(id);openProjects();},pL('حذف المشروع','Delete project'));
+  };
+ })(rowsEl[i]);
 }
 /* ============ init ============ */
 document.addEventListener('input',function(e){var el=e.target;if(!el||!/^(INPUT|TEXTAREA)$/.test(el.tagName))return;var ty=(el.type||'text').toLowerCase();if(ty==='password'||ty==='file'||ty==='color'||ty==='checkbox'||ty==='radio'||ty==='range')return;var v=el.value;if(typeof v!=='string')return;var n=enDigits(v);if(n!==v){var p=null;try{p=el.selectionStart;}catch(x){}el.value=n;try{if(p!==null)el.setSelectionRange(p,p);}catch(x){}}},true);
 fixDigitInputs();
 try{new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var a=ms[i].addedNodes;for(var j=0;j<a.length;j++){if(a[j].nodeType===1){if(a[j].matches&&a[j].matches('input'))fixDigitInputs(a[j].parentNode);else if(a[j].querySelector)fixDigitInputs(a[j]);}}}}).observe(document.body,{childList:true,subtree:true});}catch(e){}
 var migrated=load();
+pInit();
 applyLang();
 wireAll();
 hist=[snap()];histIdx=0;updateUndoBtns();
