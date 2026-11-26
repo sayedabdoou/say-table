@@ -385,9 +385,30 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 [data-theme="rose"]:not([data-x]){--ink:#4d1f2c;--headBg:#4d1f2c}
 [data-theme="violet"]:not([data-x]){--ink:#2f2150;--headBg:#2f2150}
 @supports (background:color-mix(in srgb,red,blue)){:root:not([data-theme="dark"]){--ink:color-mix(in srgb,var(--acc) 38%,#0f1714);--headBg:color-mix(in srgb,var(--acc) 38%,#0f1714)}}
+
+#licLock{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+#licLock[hidden]{display:none}
+.licCard{background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:24px;padding:24px;max-width:420px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.licCard .licT{font-weight:900;font-size:19px}
+.licCard input{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;background:var(--card);color:var(--text);text-align:center;letter-spacing:1px}
 </style>
 </head>
 <body>
+
+<div id="licLock" hidden>
+  <div class="licCard">
+    <div style="font-size:38px">🔑</div>
+    <div class="licT" id="licTtl"></div>
+    <div class="small" id="licSub"></div>
+    <input type="text" id="licCode" dir="ltr" autocomplete="off" autocapitalize="characters" placeholder="SAY-XXXX-XXXX-XXXX">
+    <button class="pill black" id="licGo" style="width:100%;justify-content:center"></button>
+    <button class="pill white" id="licRetry" style="width:100%;justify-content:center;display:none"></button>
+    <div class="small" id="licErr" style="min-height:16px"></div>
+    <hr style="border:0;border-top:1px solid var(--border);margin:6px 0">
+    <div class="small" id="licSafe"></div>
+    <div class="btnsRow"><button class="pill white" id="licExpJson" style="flex:1;justify-content:center">💾 JSON</button><button class="pill white" id="licExpXlsx" style="flex:1;justify-content:center">📗 Excel</button><button class="pill white" id="licExpPdf" style="flex:1;justify-content:center">📕 PDF</button></div>
+  </div>
+</div>
 
 <div id="lockOverlay" hidden>
   <div class="lockCard">
@@ -3016,8 +3037,7 @@ lock:{on:false,hash:''},trial:{start:0,activated:false,plan:''},lastBackup:0,tot
 view:'table',kbCol:-1,hdrColColor:'',hdrRowColor:'',btnColor:'',accColor:'',hdr:{name:'',date:'',dept:'',person:'',addr:''}};
 var SEL={r:0,c:0,r2:0,c2:0};
 var hist=[],histIdx=-1,pendingSnap=null;
-/* Change the owner code here / غيّر كود المالك هنا: */
-var OWNER_CODE='SAY-2026';
+
 var idbUrlCache={};
 function blankCell(){return {v:'',type:'text',bold:false,color:'',bg:''};}
 function blankMeta(){return {name:'',width:0,hidden:false,autoNum:false,selOptions:[]};}
@@ -4954,38 +4974,180 @@ function applyLang(){
  $('langBtn').textContent=S.lang==='ar'?'EN':'ع';
  document.title=t('appTitle');
 }
-/* ============ trial & activation ============ */
-function trialDaysLeft(){
- return TRIAL_DAYS-Math.floor((Date.now()-S.trial.start)/86400000);
+/* ============ license & trial (Firebase Firestore REST, no SDK) ============ */
+var FB={key:'AIzaSyBIl58JR_1MiPwZ4JrGCvljssGtbqXfWjg',pid:'say-table-licenses',host:'https://firestore.googleapis.com'};
+var FB_BASE=FB.host+'/v1/projects/'+FB.pid+'/databases/(default)/documents';
+var FB_DOC='projects/'+FB.pid+'/databases/(default)/documents/';
+var LIC_KEY='say_lic_v1',GRACE_MS=14*86400000,DAYMS=86400000;
+var LIC={dev:'',code:'',days:0,act:0,lastOk:0,lastSeen:0,tStart:0,tProv:false};
+var licVerified=false,licSkew=0,licSrvOk=false,licBusy=false,licTimer=null;
+function licRand(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).getRandomValues(a);var s='';for(var i=0;i<a.length;i++)s+=('0'+a[i].toString(16)).slice(-2);return s;}
+function licSave(){try{localStorage.setItem(LIC_KEY,JSON.stringify(LIC));}catch(e){}}
+function licLoad(){
+ try{var o=JSON.parse(localStorage.getItem(LIC_KEY)||'{}');for(var k in LIC)if(o[k]!==undefined)LIC[k]=o[k];}catch(e){}
+ if(!/^[a-f0-9]{32}$/.test(LIC.dev))LIC.dev=licRand();
+ if(!LIC.tStart){LIC.tStart=Date.now();LIC.tProv=true;}
+ licTick();licSave();
 }
+function licTick(){var n=Date.now();if(n>LIC.lastSeen){LIC.lastSeen=n;licSave();}}
+function licNow(){return Date.now()+licSkew;}
+function licFetch(path,opt){
+ var u=FB_BASE+path+(path.indexOf('?')>=0?'&':'?')+'key='+FB.key;
+ return fetch(u,opt).then(function(r){
+  try{var d=r.headers.get('date');if(d){var sv=Date.parse(d);if(sv){licSkew=sv-Date.now();licSrvOk=true;}}}catch(e){}
+  return r.json().catch(function(){return {};}).then(function(j){return {status:r.status,json:j||{}};});
+ });
+}
+function fStr(f,k){return (f&&f[k]&&f[k].stringValue)||'';}
+function fNum(f,k){var v=f&&f[k];if(!v)return 0;if(v.integerValue!==undefined)return parseInt(v.integerValue,10)||0;if(v.doubleValue!==undefined)return Math.floor(v.doubleValue)||0;return 0;}
+function fTs(f,k){var v=f&&f[k]&&f[k].timestampValue;return v?(Date.parse(v)||0):0;}
+function licPost(body){return licFetch(':commit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+function licEnsureDevice(){
+ return licFetch('/devices/'+LIC.dev).then(function(r){
+  if(r.status===200&&r.json.createTime){LIC.tStart=Date.parse(r.json.createTime);LIC.tProv=false;licSave();return true;}
+  if(r.status!==404)return false;
+  return licPost({writes:[{update:{name:FB_DOC+'devices/'+LIC.dev,fields:{}},updateTransforms:[{fieldPath:'createdAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:false}}]}).then(function(c){
+   if(c.status!==200)return false;
+   return licFetch('/devices/'+LIC.dev).then(function(g){
+    if(g.status===200&&g.json.createTime){LIC.tStart=Date.parse(g.json.createTime);LIC.tProv=false;licSave();return true;}
+    return false;
+   });
+  });
+ });
+}
+/* returns 'ok' | 'bad' | 'net' */
+function licVerifyCode(){
+ if(!LIC.code)return Promise.resolve('none');
+ return licFetch('/codes/'+encodeURIComponent(LIC.code)).then(function(r){
+  if(r.status===200){
+   var f=r.json.fields||{};
+   if(fStr(f,'status')==='active'&&fStr(f,'deviceId')===LIC.dev&&f.activatedAt&&fNum(f,'days')>0){
+    LIC.days=fNum(f,'days');LIC.act=fTs(f,'activatedAt');LIC.lastOk=licNow();licSave();return 'ok';
+   }
+   LIC.code='';LIC.days=0;LIC.act=0;licSave();return 'bad';
+  }
+  if(r.status===404){LIC.code='';LIC.days=0;LIC.act=0;licSave();return 'bad';}
+  return 'net';
+ }).catch(function(){return 'net';});
+}
+function licSync(){
+ if(licBusy)return;licBusy=true;
+ var devOk=false;
+ licEnsureDevice().catch(function(){return false;}).then(function(ok){devOk=ok;return licVerifyCode();}).then(function(cr){
+  if(cr==='ok'||cr==='bad'||(cr==='none'&&devOk))licVerified=true;
+  if(licSrvOk){LIC.lastSeen=licNow();licSave();}
+  licBusy=false;licApply();
+ }).catch(function(){licBusy=false;licApply();});
+}
+function licState(){
+ var now=licNow(),raw=Date.now();
+ var tamper=(raw<LIC.lastSeen-3600000)&&!licSrvOk;
+ var why='trialEnd',exp=0;
+ if(LIC.code&&LIC.act&&LIC.days){
+  exp=LIC.act+LIC.days*DAYMS;
+  if(tamper)return {s:'locked',why:'clock'};
+  if(now<exp){
+   if(!licVerified&&now-LIC.lastOk>GRACE_MS)return {s:'locked',why:'verify',exp:exp};
+   return {s:'active',exp:exp,life:LIC.days>=3650,left:exp-now};
+  }
+  why='expired';
+ }
+ if(tamper)return {s:'locked',why:'clock'};
+ var left=LIC.tStart+3*DAYMS-now;
+ if(left>0&&why!=='expired')return {s:'trial',left:left};
+ return {s:'locked',why:why,exp:exp};
+}
+function licDays(ms){return Math.max(1,Math.ceil(ms/DAYMS));}
+function licDate(ms){var d=new Date(ms),z=function(n){return (n<10?'0':'')+n;};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
 function renderTrialBadge(){
- var b=$('trialBadge');
- if(S.trial.activated){b.style.display='';b.className='ok';b.textContent='✓ '+t('activated');return;}
- var dl=trialDaysLeft();
- b.style.display='';
- b.className='';
- b.innerHTML=esc(t('trialLeft'))+' <span lang="en" dir="ltr" class="num">'+Math.max(0,dl)+'</span> '+esc(t('days'));
+ var b=$('trialBadge');if(!b)return;
+ var st=licState();b.style.display='';
+ var num=function(n){return '<span lang="en" dir="ltr" class="num">'+n+'</span>';};
+ if(st.s==='active'){b.className='ok';b.innerHTML='✓ '+esc(pL('مفعّل','Activated'))+' · '+(st.life?esc(pL('مدى الحياة','Lifetime')):esc(pL('باقي','Left'))+' '+num(licDays(st.left))+' '+esc(pL('يوم','day(s)')));}
+ else if(st.s==='trial'){b.className='';b.innerHTML=esc(pL('تجريبي: باقي','Trial:'))+' '+num(licDays(st.left))+' '+esc(pL('يوم','day(s) left'));}
+ else{b.className='';b.innerHTML='🔒 '+esc(pL('انتهى','Expired'));}
+}
+function licMsg(code){
+ return {bad:pL('كود غير صحيح','Invalid code'),off:pL('الكود غير مفعّل أو موقوف','This code is not active'),used:pL('هذا الكود مستخدم على جهاز آخر. تواصل مع البائع','This code is used on another device. Contact the seller'),denied:pL('تعذر التفعيل، تواصل مع الدعم','Could not activate, contact support'),net:pL('تعذر الاتصال بالإنترنت، جرب مرة أخرى','No internet connection, try again')}[code]||'';
+}
+function licNormCode(v){return String(v||'').toUpperCase().replace(/\s+/g,'');}
+function licFinish(code,days,act){LIC.code=code;LIC.days=days;LIC.act=act;LIC.lastOk=licNow();licVerified=true;licSave();return {ok:true};}
+function licActivate(raw){
+ var code=licNormCode(raw);
+ if(!/^[A-Z0-9][A-Z0-9-]{5,62}$/.test(code))return Promise.resolve({ok:false,msg:'bad'});
+ return licFetch('/codes/'+encodeURIComponent(code)).then(function(r){
+  if(r.status===404)return {ok:false,msg:'bad'};
+  if(r.status!==200)return {ok:false,msg:r.status===403?'denied':'net'};
+  var f=r.json.fields||{},dv=fStr(f,'deviceId'),days=fNum(f,'days');
+  if(fStr(f,'status')!=='active'||!(days>0))return {ok:false,msg:'off'};
+  if(dv&&dv!==LIC.dev)return {ok:false,msg:'used'};
+  if(dv===LIC.dev&&f.activatedAt)return licFinish(code,days,fTs(f,'activatedAt'));
+  return licPost({writes:[{update:{name:FB_DOC+'codes/'+code,fields:{deviceId:{stringValue:LIC.dev}}},updateMask:{fieldPaths:['deviceId']},updateTransforms:[{fieldPath:'activatedAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:true}}]}).then(function(c){
+   return licFetch('/codes/'+encodeURIComponent(code)).then(function(g){
+    var gf=g.json.fields||{};
+    if(g.status===200&&fStr(gf,'deviceId')===LIC.dev&&gf.activatedAt)return licFinish(code,fNum(gf,'days'),fTs(gf,'activatedAt'));
+    if(c.status===403||c.status===409)return {ok:false,msg:(g.status===200&&fStr(gf,'deviceId'))?'used':'denied'};
+    return {ok:false,msg:'net'};
+   });
+  });
+ }).catch(function(){return {ok:false,msg:'net'};});
+}
+function licLockUI(st){
+ var el=$('licLock');if(!el)return;
+ var ttl={trialEnd:pL('انتهت الفترة التجريبية','Trial ended'),expired:pL('انتهى الاشتراك','Subscription ended'),verify:pL('مطلوب تحقق من الاشتراك','Verification needed'),clock:pL('وقت الجهاز غير صحيح','Device clock is wrong')}[st.why]||pL('التطبيق مقفل','Locked');
+ var sub={trialEnd:pL('أدخل كود التفعيل للمتابعة','Enter your activation code to continue'),expired:pL('أدخل كود جديد للمتابعة','Enter a new code to continue'),verify:pL('اتصل بالإنترنت لتجديد التحقق من اشتراكك','Connect to the internet to renew verification'),clock:pL('اضبط التاريخ والوقت واتصل بالإنترنت','Fix the date and time and connect to the internet')}[st.why]||'';
+ $('licTtl').textContent=ttl;$('licSub').textContent=sub;
+ $('licCode').placeholder='SAY-XXXX-XXXX-XXXX';
+ $('licGo').textContent=pL('تفعيل','Activate');
+ $('licRetry').textContent=pL('إعادة التحقق','Check again');
+ $('licSafe').textContent=pL('بياناتك محفوظة. تقدر تصدّرها أو تطبعها:','Your data is safe. You can export or print it:');
+ $('licRetry').style.display=(st.why==='verify'||st.why==='clock')?'':'none';
+ el.hidden=false;$('genModal').hidden=true;
+ for(var i=0;i<document.body.children.length;i++){var c=document.body.children[i];if(c.id!=='licLock'&&c.id!=='toast'&&c.tagName!=='SCRIPT')c.setAttribute('inert','');}
+}
+function licUnlockUI(){
+ var el=$('licLock');if(!el||el.hidden)return;
+ el.hidden=true;
+ for(var i=0;i<document.body.children.length;i++)document.body.children[i].removeAttribute('inert');
+}
+function licApply(){
+ var st=licState();
+ if(st.s==='locked')licLockUI(st);else licUnlockUI();
+ try{renderTrialBadge();}catch(e){}
+}
+function licDoActivate(inputId,errId,after){
+ var v=$(inputId).value,er=$(errId);er.style.color='var(--muted)';er.textContent=pL('جاري التحقق...','Checking...');
+ licActivate(v).then(function(r){
+  if(r.ok){er.textContent='';licApply();toast(pL('تم التفعيل ✅','Activated ✅'));if(after)after();}
+  else{er.style.color='var(--danger)';er.textContent=licMsg(r.msg);}
+ });
 }
 function openActivation(blocking){
- var plans=[['planW','3$'],['planM','9$'],['planY','49$'],['planL','99$']];
- var ph='';
- for(var i=0;i<plans.length;i++)ph+='<div class="plan'+(i===1?' on':'')+'" data-plan="'+plans[i][0]+'"><div class="p1">'+t(plans[i][0])+'</div><div class="p2">'+plans[i][1]+'</div></div>';
- openGen('<h3>🎁 '+(blocking?t('actTitle'):t('activated')===t('activated')&&S.trial.activated?t('activated'):t('actTitle'))+(blocking?'':'<button class="x" data-gc>✕</button>')+'</h3>'
-  +'<div class="small" style="margin-bottom:8px">'+t('actSub')+'</div>'
-  +'<div class="plans">'+ph+'</div>'
-  +'<label>'+t('actCode')+'</label><input type="text" id="actCode" placeholder="SAY-XXXX-XXXX" style="direction:ltr;text-align:left">'
-  +'<div class="btnsRow"><button class="pill black" id="actGo" style="flex:1;justify-content:center">'+t('actBtn')+'</button></div>'
-  +'<div class="small" id="actErr" style="color:var(--danger)"></div>');
- if(!blocking)wireGenClose();
- var chosen='planM';
- var ps=document.querySelectorAll('.plan');
- for(var j=0;j<ps.length;j++){(function(p){p.onclick=function(){for(var k=0;k<ps.length;k++)ps[k].classList.remove('on');p.classList.add('on');chosen=p.getAttribute('data-plan');};})(ps[j]);}
- $('actGo').onclick=function(){
-  var code=$('actCode').value.trim();
-  if(code.length<6&&code!==OWNER_CODE){$('actErr').textContent=t('actBad');return;}
-  S.trial.activated=true;S.trial.plan=(code===OWNER_CODE)?'owner':chosen;save();
-  $('genModal').hidden=true;renderTrialBadge();toast(t('actDone'));
- };
+ var st=licState();
+ var info='';
+ if(st.s==='active')info=(st.life?pL('اشتراكك: مدى الحياة','Your plan: lifetime'):pL('ينتهي الاشتراك في ','Subscription ends ')+'<span lang="en" dir="ltr" class="num">'+licDate(st.exp)+'</span>');
+ else if(st.s==='trial')info=pL('أنت في الفترة التجريبية. أدخل كود التفعيل لتفعيل التطبيق.','You are on the free trial. Enter an activation code to activate.');
+ openGen('<h3>🔑 '+esc(pL('تفعيل التطبيق','Activate the app'))+'<button class="x" data-gc>✕</button></h3>'
+  +'<div class="small" style="margin-bottom:8px">'+info+'</div>'
+  +'<label>'+esc(pL('كود التفعيل','Activation code'))+'</label><input type="text" id="actCode" placeholder="SAY-XXXX-XXXX-XXXX" dir="ltr" autocomplete="off" autocapitalize="characters" style="text-align:left">'
+  +'<div class="btnsRow"><button class="pill black" id="actGo" style="flex:1;justify-content:center">'+esc(pL('تفعيل','Activate'))+'</button></div>'
+  +'<div class="small" id="actErr" style="min-height:16px"></div>');
+ wireGenClose();
+ $('actGo').onclick=function(){licDoActivate('actCode','actErr',function(){$('genModal').hidden=true;});};
+ $('actCode').onkeydown=function(e){if(e.key==='Enter')$('actGo').click();};
+}
+function licBoot(){
+ $('licGo').onclick=function(){licDoActivate('licCode','licErr');};
+ $('licCode').onkeydown=function(e){if(e.key==='Enter')$('licGo').click();};
+ $('licRetry').onclick=function(){$('licErr').style.color='var(--muted)';$('licErr').textContent=pL('جاري التحقق...','Checking...');licSync();setTimeout(function(){$('licErr').textContent='';},2500);};
+ $('licExpJson').onclick=function(){exportJSON(true);};
+ $('licExpXlsx').onclick=function(){exportXLSX();};
+ $('licExpPdf').onclick=function(){exportPDF();};
+ licApply();licSync();
+ window.addEventListener('online',licSync);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden){licTick();licApply();licSync();}});
+ if(licTimer)clearInterval(licTimer);
+ licTimer=setInterval(function(){licTick();licApply();},60000);
 }
 /* ============ password lock ============ */
 function bootLocked(){
@@ -4998,10 +5160,16 @@ function bootLocked(){
   });
  };
  var tryOwner=function(){
-  if($('ownInput').value.trim()===OWNER_CODE){
-   S.lock={on:false,hash:''};S.trial.activated=true;S.trial.plan='owner';save();
-   $('lockOverlay').hidden=true;renderTrialBadge();toast(t('ownerOk'));
-  }else{$('lockErr').textContent=t('ownerBad');$('ownInput').value='';}
+  var oc=licNormCode($('ownInput').value);
+  if(!/^[A-Z0-9][A-Z0-9-]{5,62}$/.test(oc)){$('lockErr').textContent=t('ownerBad');$('ownInput').value='';return;}
+  $('lockErr').textContent='...';
+  licFetch('/codes/'+encodeURIComponent(oc)).then(function(r){
+   var f=r.json.fields||{};
+   if(r.status===200&&fStr(f,'plan')==='owner'&&fStr(f,'status')==='active'){
+    S.lock={on:false,hash:''};save();
+    $('lockOverlay').hidden=true;$('lockErr').textContent='';toast(t('ownerOk'));
+   }else{$('lockErr').textContent=(r.status===200||r.status===404)?t('ownerBad'):licMsg('net');$('ownInput').value='';}
+  }).catch(function(){$('lockErr').textContent=licMsg('net');});
  };
  $('lockGo').onclick=tryUnlock;
  $('ownGo').onclick=tryOwner;
@@ -5350,13 +5518,14 @@ fixDigitInputs();
 try{new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var a=ms[i].addedNodes;for(var j=0;j<a.length;j++){if(a[j].nodeType===1){if(a[j].matches&&a[j].matches('input'))fixDigitInputs(a[j].parentNode);else if(a[j].querySelector)fixDigitInputs(a[j]);}}}}).observe(document.body,{childList:true,subtree:true});}catch(e){}
 var migrated=load();
 pInit();
+licLoad();
 applyLang();
 wireAll();
 hist=[snap()];histIdx=0;updateUndoBtns();
 renderAll();
 if(migrated)toast(t('restoredOld'));
 if(S.lock.on)bootLocked();
-else if(!S.trial.activated&&trialDaysLeft()<0)openActivation(true);
+licBoot();
 if(updateBackupDot())setTimeout(function(){toast(t('backupWarn'),'warn');},1500);
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
  try{navigator.serviceWorker.register('sw.js').catch(function(){});
