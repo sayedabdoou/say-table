@@ -391,6 +391,12 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 .licCard{background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:24px;padding:24px;max-width:420px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
 .licCard .licT{font-weight:900;font-size:19px}
 .licCard input{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;background:var(--card);color:var(--text);text-align:center;letter-spacing:1px}
+
+#toolbar .viewSwitch{padding:2px;align-items:center}
+#toolbar .viewSwitch button{padding:5px 12px;font-size:12px}
+#tipBanner{justify-content:center;text-align:center}
+#tipBanner>span:nth-child(2){text-align:center}
+#tipBanner button{margin-inline-start:0}
 </style>
 </head>
 <body>
@@ -441,10 +447,6 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
     <button class="iconPill" id="themeBtn" title="Theme">🎨</button>
   </div>
   <div class="searchRow">
-    <div class="viewSwitch">
-      <button id="viewTable" class="on" data-i18n="vTable">جدول</button>
-      <button id="viewKanban" data-i18n="vKanban">بطاقات</button>
-    </div>
     <div class="searchBox">
       <span class="ic">🔍</span>
       <input id="searchInput" data-i18n-ph="searchPh" placeholder="بحث سريع...">
@@ -456,8 +458,10 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 
 <div id="toolbar">
   <button class="pill black" id="tbForm">🧾 <span data-i18n="form">نموذج إدخال</span></button>
-  <button class="pill white" id="tbAddRow">➕ <span data-i18n="row">صف</span></button>
-  <button class="pill white" id="tbAddCol">➕ <span data-i18n="col">عمود</span></button>
+  <div class="viewSwitch">
+    <button id="viewTable" class="on" data-i18n="vTable">جدول</button>
+    <button id="viewKanban" data-i18n="vKanban">بطاقات</button>
+  </div>
   <button class="pill white" id="tbFilter">🔽 <span data-i18n="filters">فلاتر</span></button>
   <button class="pill white" id="tbCond">🚦 <span data-i18n="condFmt">تنسيق شرطي</span></button>
   <button class="pill white" id="tbDash">📊 <span data-i18n="dash">الإحصائيات</span></button>
@@ -3088,6 +3092,7 @@ function load(){
  return migrated;
 }
 function save(){
+ if(window.__so)return;
  try{
   localStorage.setItem(KEY,JSON.stringify({v:2,rows:S.rows,cols:S.cols,data:S.data,colMeta:S.colMeta,condFmt:S.condFmt,
    filters:S.filters,sort:S.sort,theme:S.theme,lang:S.lang,lock:S.lock,trial:S.trial,lastBackup:S.lastBackup,
@@ -4979,10 +4984,10 @@ var FB={key:'AIzaSyBIl58JR_1MiPwZ4JrGCvljssGtbqXfWjg',pid:'say-table-licenses',h
 var FB_BASE=FB.host+'/v1/projects/'+FB.pid+'/databases/(default)/documents';
 var FB_DOC='projects/'+FB.pid+'/databases/(default)/documents/';
 var LIC_KEY='say_lic_v1',GRACE_MS=14*86400000,DAYMS=86400000;
-var LIC={dev:'',code:'',days:0,act:0,lastOk:0,lastSeen:0,tStart:0,tProv:false};
+var LIC={dev:'',code:'',days:0,endAt:0,act:0,lastOk:0,lastSeen:0,tStart:0,tProv:false};
 var licVerified=false,licSkew=0,licSrvOk=false,licBusy=false,licTimer=null;
 function licRand(){var a=new Uint8Array(16);(window.crypto||window.msCrypto).getRandomValues(a);var s='';for(var i=0;i<a.length;i++)s+=('0'+a[i].toString(16)).slice(-2);return s;}
-function licSave(){try{localStorage.setItem(LIC_KEY,JSON.stringify(LIC));}catch(e){}}
+function licSave(){if(window.__so)return;try{localStorage.setItem(LIC_KEY,JSON.stringify(LIC));}catch(e){}}
 function licLoad(){
  try{var o=JSON.parse(localStorage.getItem(LIC_KEY)||'{}');for(var k in LIC)if(o[k]!==undefined)LIC[k]=o[k];}catch(e){}
  if(!/^[a-f0-9]{32}$/.test(LIC.dev))LIC.dev=licRand();
@@ -5021,12 +5026,15 @@ function licVerifyCode(){
  return licFetch('/codes/'+encodeURIComponent(LIC.code)).then(function(r){
   if(r.status===200){
    var f=r.json.fields||{};
-   if(fStr(f,'status')==='active'&&fStr(f,'deviceId')===LIC.dev&&f.activatedAt&&fNum(f,'days')>0){
-    LIC.days=fNum(f,'days');LIC.act=fTs(f,'activatedAt');LIC.lastOk=licNow();licSave();return 'ok';
+   if(fStr(f,'status')==='active'&&fStr(f,'plan')==='owner'&&(fNum(f,'days')>0||fTs(f,'expiresAt'))){
+    LIC.days=fNum(f,'days');LIC.endAt=fTs(f,'expiresAt');if(!LIC.act)LIC.act=licNow();LIC.lastOk=licNow();licSave();return 'ok';
    }
-   LIC.code='';LIC.days=0;LIC.act=0;licSave();return 'bad';
+   if(fStr(f,'status')==='active'&&fStr(f,'deviceId')===LIC.dev&&f.activatedAt&&(fNum(f,'days')>0||fTs(f,'expiresAt'))){
+    LIC.days=fNum(f,'days');LIC.endAt=fTs(f,'expiresAt');LIC.act=fTs(f,'activatedAt');LIC.lastOk=licNow();licSave();return 'ok';
+   }
+   LIC.code='';LIC.days=0;LIC.endAt=0;LIC.act=0;licSave();return 'bad';
   }
-  if(r.status===404){LIC.code='';LIC.days=0;LIC.act=0;licSave();return 'bad';}
+  if(r.status===404){LIC.code='';LIC.days=0;LIC.endAt=0;LIC.act=0;licSave();return 'bad';}
   return 'net';
  }).catch(function(){return 'net';});
 }
@@ -5037,18 +5045,20 @@ function licSync(){
   if(cr==='ok'||cr==='bad'||(cr==='none'&&devOk))licVerified=true;
   if(licSrvOk){LIC.lastSeen=licNow();licSave();}
   licBusy=false;licApply();
+  try{if(fbLoad().q)fbSend();}catch(e){}
  }).catch(function(){licBusy=false;licApply();});
 }
 function licState(){
  var now=licNow(),raw=Date.now();
  var tamper=(raw<LIC.lastSeen-3600000)&&!licSrvOk;
  var why='trialEnd',exp=0;
- if(LIC.code&&LIC.act&&LIC.days){
-  exp=LIC.act+LIC.days*DAYMS;
+ if(LIC.code&&LIC.act&&(LIC.days||LIC.endAt)){
+  exp=LIC.days?LIC.act+LIC.days*DAYMS:Infinity;
+  if(LIC.endAt)exp=Math.min(exp,LIC.endAt);
   if(tamper)return {s:'locked',why:'clock'};
   if(now<exp){
    if(!licVerified&&now-LIC.lastOk>GRACE_MS)return {s:'locked',why:'verify',exp:exp};
-   return {s:'active',exp:exp,life:LIC.days>=3650,left:exp-now};
+   return {s:'active',exp:exp,life:!LIC.endAt&&LIC.days>=3650,left:exp-now};
   }
   why='expired';
  }
@@ -5068,7 +5078,7 @@ function renderTrialBadge(){
  else{b.className='';b.innerHTML='🔒 '+esc(pL('انتهى','Expired'));}
 }
 function licMsg(code){
- return {bad:pL('كود غير صحيح','Invalid code'),off:pL('الكود غير مفعّل أو موقوف','This code is not active'),used:pL('هذا الكود مستخدم على جهاز آخر. تواصل مع البائع','This code is used on another device. Contact the seller'),denied:pL('تعذر التفعيل، تواصل مع الدعم','Could not activate, contact support'),net:pL('تعذر الاتصال بالإنترنت، جرب مرة أخرى','No internet connection, try again')}[code]||'';
+ return {bad:pL('كود غير صحيح','Invalid code'),off:pL('الكود غير مفعّل أو موقوف','This code is not active'),used:pL('هذا الكود مستخدم على جهاز آخر. تواصل مع البائع','This code is used on another device. Contact the seller'),denied:pL('تعذر التفعيل، تواصل مع الدعم','Could not activate, contact support'),net:pL('تعذر الاتصال بالإنترنت، جرب مرة أخرى','No internet connection, try again'),early:pL('هذا الكود لم يبدأ بعد','This code is not valid yet'),ended:pL('انتهت صلاحية هذا الكود','This code has expired')}[code]||'';
 }
 function licNormCode(v){return String(v||'').replace(/\s+/g,'');}
 function licCodeOk(c){return c.length>=4&&c.length<=100&&c!=='.'&&c!=='..'&&!/[\/\u0000-\u001f]/.test(c);}
@@ -5079,7 +5089,7 @@ function licGetCode(c){
   return {code:c,r:r};
  });
 }
-function licFinish(code,days,act){LIC.code=code;LIC.days=days;LIC.act=act;LIC.lastOk=licNow();licVerified=true;licSave();return {ok:true};}
+function licFinish(code,days,act,ea){LIC.code=code;LIC.days=days;LIC.endAt=ea||0;LIC.act=act;LIC.lastOk=licNow();licVerified=true;licSave();return {ok:true};}
 function licActivate(raw){
  var code=licNormCode(raw);
  if(!licCodeOk(code))return Promise.resolve({ok:false,msg:'bad'});
@@ -5087,14 +5097,17 @@ function licActivate(raw){
   var r=x.r;code=x.code;
   if(r.status===404)return {ok:false,msg:'bad'};
   if(r.status!==200)return {ok:false,msg:r.status===403?'denied':'net'};
-  var f=r.json.fields||{},dv=fStr(f,'deviceId'),days=fNum(f,'days');
-  if(fStr(f,'status')!=='active'||!(days>0))return {ok:false,msg:'off'};
+  var f=r.json.fields||{},dv=fStr(f,'deviceId'),days=fNum(f,'days'),sa=fTs(f,'startAt'),ea=fTs(f,'expiresAt');
+  if(fStr(f,'status')!=='active'||!(days>0||ea))return {ok:false,msg:'off'};
+  if(sa&&licNow()<sa)return {ok:false,msg:'early'};
+  if(ea&&licNow()>=ea)return {ok:false,msg:'ended'};
+  if(fStr(f,'plan')==='owner')return licFinish(code,days,licNow(),ea);
   if(dv&&dv!==LIC.dev)return {ok:false,msg:'used'};
-  if(dv===LIC.dev&&f.activatedAt)return licFinish(code,days,fTs(f,'activatedAt'));
+  if(dv===LIC.dev&&f.activatedAt)return licFinish(code,days,fTs(f,'activatedAt'),ea);
   return licPost({writes:[{update:{name:FB_DOC+'codes/'+code,fields:{deviceId:{stringValue:LIC.dev}}},updateMask:{fieldPaths:['deviceId']},updateTransforms:[{fieldPath:'activatedAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:true}}]}).then(function(c){
    return licFetch('/codes/'+encodeURIComponent(code)).then(function(g){
     var gf=g.json.fields||{};
-    if(g.status===200&&fStr(gf,'deviceId')===LIC.dev&&gf.activatedAt)return licFinish(code,fNum(gf,'days'),fTs(gf,'activatedAt'));
+    if(g.status===200&&fStr(gf,'deviceId')===LIC.dev&&gf.activatedAt)return licFinish(code,fNum(gf,'days'),fTs(gf,'activatedAt'),fTs(gf,'expiresAt'));
     if(c.status===403||c.status===409)return {ok:false,msg:(g.status===200&&fStr(gf,'deviceId'))?'used':'denied'};
     return {ok:false,msg:'net'};
    });
@@ -5144,6 +5157,68 @@ function openActivation(blocking){
  wireGenClose();
  $('actGo').onclick=function(){licDoActivate('actCode','actErr',function(){$('genModal').hidden=true;});};
  $('actCode').onkeydown=function(e){if(e.key==='Enter')$('actGo').click();};
+}
+/* ---- app rating (feedback) ---- */
+var FBK='say_fb_v1';
+function fbLoad(){try{return JSON.parse(localStorage.getItem(FBK)||'{}')||{};}catch(e){return {};}}
+function fbSave(o){if(window.__so)return;try{localStorage.setItem(FBK,JSON.stringify(o));}catch(e){}}
+function fbSend(){
+ var o=fbLoad();if(!o.q||o.sent||!LIC.dev)return Promise.resolve(false);
+ var f={rating:{integerValue:String(o.q.rating)}};
+ if(o.q.comment)f.comment={stringValue:o.q.comment};
+ if(o.q.name)f.name={stringValue:o.q.name};
+ return licPost({writes:[{update:{name:FB_DOC+'feedback/'+LIC.dev,fields:f},updateTransforms:[{fieldPath:'createdAt',setToServerValue:'REQUEST_TIME'}],currentDocument:{exists:false}}]}).then(function(r){
+  if(r.status===200||r.status===409){o.sent=true;o.q=null;fbSave(o);return true;}
+  if(r.status===403||r.status===400){o.q=null;fbSave(o);return false;}
+  return false;
+ }).catch(function(){return false;});
+}
+function openRating(){
+ var o=fbLoad(),sent=!!o.sent,cur=(o.q&&o.q.rating)||o.rating||0;
+ var stars='';for(var i=1;i<=5;i++)stars+='<button type="button" class="fbStar" data-s="'+i+'" style="border:0;background:transparent;font-size:34px;cursor:pointer;padding:2px 4px;color:'+(i<=cur?'#f5b301':'#9aa3a0')+'">'+(i<=cur?'★':'☆')+'</button>';
+ openGen('<h3>⭐ '+esc(pL('قيّم التطبيق','Rate the app'))+'<button class="x" data-gc>✕</button></h3>'
+  +(sent?'<div class="small" style="margin-bottom:8px">'+esc(pL('شكرًا لك! وصلنا تقييمك.','Thank you! We received your rating.'))+'</div>'
+   :'<div id="fbStars" style="text-align:center;direction:ltr">'+stars+'</div>'
+   +'<label>'+esc(pL('اسمك (اختياري)','Your name (optional)'))+'</label><input type="text" id="fbName" maxlength="40" autocomplete="off">'
+   +'<label>'+esc(pL('تعليق (اختياري)','Comment (optional)'))+'</label><textarea id="fbCmt" maxlength="500" rows="3" style="width:100%;box-sizing:border-box"></textarea>'
+   +'<div class="btnsRow"><button class="pill black" id="fbGo" style="flex:1;justify-content:center">'+esc(pL('إرسال التقييم','Send rating'))+'</button></div>'
+   +'<div class="small" id="fbMsg" style="min-height:16px">'+((o.q&&!o.sent)?esc(pL('تقييمك محفوظ وهيتبعت لما يتوفر اتصال.','Your rating is saved and will be sent when you are online.')):'')+'</div>'));
+ wireGenClose();
+ if(sent)return;
+ var sel=cur;
+ var paint=function(){var b=document.querySelectorAll('.fbStar');for(var i=0;i<b.length;i++){var n=i+1;b[i].textContent=n<=sel?'★':'☆';b[i].style.color=n<=sel?'#f5b301':'#9aa3a0';}};
+ var bs=document.querySelectorAll('.fbStar');
+ for(var j=0;j<bs.length;j++){(function(b){b.onclick=function(){sel=parseInt(b.getAttribute('data-s'),10);paint();};})(bs[j]);}
+ $('fbGo').onclick=function(){
+  if(!sel){$('fbMsg').textContent=pL('اختار عدد النجوم أولاً.','Pick a star rating first.');return;}
+  var cm=($('fbCmt').value||'').trim().slice(0,500),nm=($('fbName').value||'').trim().slice(0,40);
+  fbSave({rating:sel,q:{rating:sel,comment:cm,name:nm},sent:false});
+  $('fbGo').disabled=true;$('fbMsg').textContent=pL('جاري الإرسال...','Sending...');
+  fbSend().then(function(ok){
+   if(ok){$('genModal').hidden=true;toast(pL('شكرًا لتقييمك ⭐','Thanks for your rating ⭐'));}
+   else{var o2=fbLoad();$('fbGo').disabled=false;$('fbMsg').textContent=o2.q?pL('مفيش اتصال دلوقتي. تقييمك محفوظ وهيتبعت تلقائيًا بعدين.','No connection now. Your rating is saved and will be sent automatically later.'):pL('تعذر الإرسال.','Could not send.');}
+  });
+ };
+}
+function openSignOut(){
+ openGen('<h3>🚪 '+esc(pL('تسجيل الخروج من هذا الجهاز','Sign out of this device'))+'<button class="x" data-gc>✕</button></h3>'
+  +'<div class="small" style="margin-bottom:8px;line-height:1.7">'+esc(pL('هيتمسح من هذا الجهاز: كود التفعيل وكل الجداول والمشاريع والمرفقات. صدّر نسخة من بياناتك قبل الخروج، لأن المسح نهائي على هذا الجهاز.','This will erase from this device: the activation code, all tables, projects and attachments. Export a copy of your data first, the erase is permanent on this device.'))+'</div>'
+  +'<div class="small" style="margin-bottom:10px;line-height:1.7">'+esc(pL('ملحوظة: لو كودك مربوط بالجهاز ده، المدة بتفضل مربوطة بيه على السيرفر لحد ما صاحب النظام يفك الربط.','Note: if your code is tied to this device, it stays tied on the server until the administrator releases it.'))+'</div>'
+  +'<div class="btnsRow"><button class="pill white" id="soJson" style="flex:1;justify-content:center">💾 JSON</button><button class="pill white" id="soXlsx" style="flex:1;justify-content:center">📗 Excel</button></div>'
+  +'<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="soOk"> <span class="small">'+esc(pL('صدّرت بياناتي وأنا موافق على المسح','I exported my data and I agree to the erase'))+'</span></label>'
+  +'<div class="btnsRow"><button class="pill white" id="soGo" style="flex:1;justify-content:center;color:var(--danger)" disabled>'+esc(pL('تسجيل الخروج ومسح بيانات الجهاز','Sign out and erase device data'))+'</button></div>');
+ wireGenClose();
+ $('soJson').onclick=function(){exportJSON(true);};
+ $('soXlsx').onclick=function(){exportXLSX();};
+ $('soOk').onchange=function(){$('soGo').disabled=!this.checked;};
+ $('soGo').onclick=function(){
+  window.__so=true;
+  try{if(licTimer)clearInterval(licTimer);}catch(e){}
+  var wipe=function(){try{var ks=[];for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&(k.indexOf('say_')===0||k==='stOfflineReady'))ks.push(k);}ks.forEach(function(k){localStorage.removeItem(k);});}catch(e){}};
+  wipe();
+  var done=function(){wipe();location.reload();};
+  try{var rq=indexedDB.deleteDatabase('say_table_pro');rq.onsuccess=rq.onerror=rq.onblocked=done;setTimeout(done,1500);}catch(e){done();}
+ };
 }
 function licBoot(){
  $('licGo').onclick=function(){licDoActivate('licCode','licErr');};
@@ -5210,6 +5285,10 @@ function openSettings(){
    :'<div class="small" style="margin-bottom:6px">'+t('pwOff2')+'</div><input type="password" id="pwSet" placeholder="'+t('pwSet')+'"><div class="btnsRow"><button class="pill black" id="pwSetGo" style="flex:1;justify-content:center">'+t('pwSet')+'</button></div>')
   +'<div class="small">'+t('pwCosmetic')+'</div>'
   +'<label style="margin-top:14px">🙈 '+t('hiddenCols')+'</label><div>'+(hidList||'<span class="small">'+t('none')+'</span>')+'</div>'
+  +'<label style="margin-top:14px">⭐ '+pL('قيّم التطبيق','Rate the app')+'</label>'
+  +'<div class="btnsRow"><button class="pill white" id="setRate" style="flex:1;justify-content:center">'+pL('أعطِ تقييمك','Give your rating')+'</button></div>'
+  +'<label style="margin-top:14px">🚪 '+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</label>'
+  +'<div class="btnsRow"><button class="pill white" id="setSignOut" style="flex:1;justify-content:center;color:var(--danger)">'+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</button></div>'
   +'<div class="btnsRow" style="margin-top:18px"><button class="pill green" id="setBackup" style="flex:1;justify-content:center">💾 '+t('asBackup')+'</button></div>');
  wireGenClose();
  var ds=document.querySelectorAll('[data-th]');
@@ -5219,6 +5298,8 @@ function openSettings(){
  var bcI=$('btnColorIn');if(bcI)bcI.oninput=function(){S.btnColor=this.value;applyTheme();save();};
  var acI=$('accColorIn');if(acI)acI.oninput=function(){S.accColor=this.value;applyTheme();save();};
  var bcOff=$('btnColorOff');if(bcOff)bcOff.onclick=function(){S.btnColor='';S.accColor='';applyTheme();save();openSettings();};
+ var rtB=$('setRate');if(rtB)rtB.onclick=openRating;
+ var soB=$('setSignOut');if(soB)soB.onclick=openSignOut;
  var hcOff=$('hdrColorOff');if(hcOff)hcOff.onclick=function(){S.hdrColColor='';S.hdrRowColor='';save();renderAll();openSettings();};
  var uhs=document.querySelectorAll('[data-unhide]');
  for(var k=0;k<uhs.length;k++){(function(b){b.onclick=function(){pushHist();S.colMeta[parseInt(b.getAttribute('data-unhide'),10)].hidden=false;renderAll();openSettings();};})(uhs[k]);}
@@ -5329,8 +5410,6 @@ function wireAll(){
  wireTable();wireKeyboard();wireMarkup();wireOverlayClose();
  $('ceSave').onclick=saveCell;
  $('ceClear').onclick=clearCell;
- $('tbAddRow').onclick=function(){addRows(1);};
- $('tbAddCol').onclick=function(){addCols(1);};
  $('tbClear').onclick=clearAllData;
  $('tbImport').onclick=function(){importMenu(this);};
  $('tbExport').onclick=function(){exportMenu(this);};
@@ -5369,7 +5448,7 @@ var PGLOBAL=['lang','theme','lock','trial','lastBackup','btnColor','accColor'];
 function pL(a,e){return S.lang==='ar'?a:e;}
 function pid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function pReg(){try{var r=JSON.parse(localStorage.getItem(PKEY));if(r&&r.list&&r.list.length&&r.active)return r;}catch(e){}return null;}
-function pSetReg(r){localStorage.setItem(PKEY,JSON.stringify(r));}
+function pSetReg(r){if(window.__so)return;localStorage.setItem(PKEY,JSON.stringify(r));}
 function pInit(){
  if(pReg())return;
  var id=pid();
