@@ -92,7 +92,7 @@ th.colTotHead{background:var(--accSoft);color:var(--text);font-weight:900;text-a
 #projHdr input{width:100%;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:999px;padding:10px 18px;font-size:14px;font-weight:700;font-family:inherit}
 #projHdr input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--accSoft)}
 @media print{#projHdr input{border:0;padding:2px 14px}}
-#tableWrap{overflow:auto;padding:0 14px;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 330px);border-radius:18px}
+#tableWrap{touch-action:pan-x pan-y;overflow:auto;padding:0 14px;-webkit-overflow-scrolling:touch;max-height:calc(100vh - 330px);border-radius:18px}
 table{border-collapse:separate;border-spacing:0;background:var(--card);border:2px solid var(--headBg);border-radius:18px;box-shadow:0 2px 8px rgba(17,17,17,.06)}
 th,td{border:0;border-inline-end:1px solid var(--border);border-bottom:1px solid var(--border);padding:10px 12px;min-width:110px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 thead th{position:sticky;top:0;z-index:5;background:var(--headBg);color:var(--headTx);font-weight:800;text-align:center;padding:0;border-inline-end:1px solid color-mix(in srgb,var(--headTx) 22%,transparent)}
@@ -127,6 +127,9 @@ td:has(>.cellImg){position:relative;padding:0}
 .cellImg.contain{object-fit:contain}.rowMenuBtn{position:absolute;top:1px;inset-inline-start:1px;font-size:11px;line-height:1;padding:3px 4px;cursor:pointer;opacity:.85;border-radius:6px}
 .rowMenuBtn:hover{background:rgba(255,255,255,.22);opacity:1}
 thead th.corner{cursor:pointer}
+th.corner .fsCorner{display:flex;align-items:center;justify-content:center;margin:0 auto 2px;border:2px solid var(--onink);background:var(--ink);color:var(--onink);width:30px;height:26px;border-radius:8px;cursor:pointer;padding:0}
+th.corner .fsCorner:hover{filter:brightness(1.25)}
+th.corner .fsCorner svg{display:block;pointer-events:none}
 thead th.corner.allSel{background:var(--acc);color:#fff}
 #mainTable{width:max-content}
 td.flashCell{outline:4px solid #f59e0b!important;outline-offset:-4px;animation:flashC .55s ease 3}
@@ -550,6 +553,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 
 <button id="hdrHandle" type="button">⌄ <span id="hdrHandleTx">القائمة</span></button>
 <div id="tableWrap"><table id="mainTable"></table></div>
+<button id="zoomChip" type="button" style="display:none;position:fixed;left:10px;bottom:64px;z-index:60;border:2px solid var(--onink);background:var(--ink);color:var(--onink);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)">100% ↺</button>
 
 <div id="kanbanWrap" hidden>
   <div class="kbBar">
@@ -3036,7 +3040,7 @@ copyDone:'تم النسخ',pasted:'تم اللصق',swapped:'تم تبديل ا�
 expPdfNote:'سيُفتح معاينة الطباعة، اختر حفظ كـ PDF',
 noSel:'حدد خلية أو صف أولا',
 enterText:'اكتب النص',kbNoCols:'لا يوجد عمود قائمة اختيار، أضف خلية قائمة اختيار أولا',
-fileTooBig:'الملف كبير جدا (الحد 20MB)',idbErr:'تعذر حفظ المرفق في المتصفح',
+fileTooBig:'الملف كبير جدا (الحد 20MB)',idbErr:'تعذر حفظ المرفق في المتصفح',lsErr:'مساحة تخزين المتصفح ممتلئة أو محظورة، صدّر نسخة احتياطية الآن',
 tip:'نصيحة: الكاميرا تعمل مباشرة في كروم. إذا كنت داخل واتساب افتح الرابط في متصفح خارجي. الضغط المطول ثم السحب = نقل أو تبديل.',
 confirmTitle:'تأكيد',confirmYes:'تأكيد',calcEq:'المعادلة',calcWillBe:'القيمة في الخلية ستكون',recVideo:'تسجيل فيديو',pickVideo:'اختيار فيديو',expPDF:'تقرير PDF',expHTML:'تقرير HTML',
 ownerTitle:'كود المالك',ownerPh:'أدخل كود المالك',ownerGo:'فتح دائم',ownerBad:'كود المالك غير صحيح',ownerOk:'تم الفتح نهائيا على هذا الجهاز'
@@ -3076,7 +3080,7 @@ copyDone:'Copied',pasted:'Pasted',swapped:'Cells swapped',
 expPdfNote:'A print preview will open, choose Save as PDF',
 noSel:'Select a cell or row first',
 enterText:'Enter text',kbNoCols:'No single-select column yet, add a select cell first',
-fileTooBig:'File too large (20MB max)',idbErr:'Could not store attachment in browser',
+fileTooBig:'File too large (20MB max)',idbErr:'Could not store attachment in browser',lsErr:'Browser storage is full or blocked, export a backup now',
 tip:'Tip: the camera works directly in Chrome. If you are inside WhatsApp, open the link in an external browser. Long press then drag = move or swap.',
 confirmTitle:'Confirm',confirmYes:'Confirm',calcEq:'Equation',calcWillBe:'Cell value will be',recVideo:'Record video',pickVideo:'Choose video',expPDF:'PDF report',expHTML:'HTML report',
 ownerTitle:'Owner code',ownerPh:'Enter owner code',ownerGo:'Permanent unlock',ownerBad:'Wrong owner code',ownerOk:'Permanently unlocked on this device'
@@ -3147,7 +3151,7 @@ function save(){
   localStorage.setItem(KEY,JSON.stringify({v:2,rows:S.rows,cols:S.cols,data:S.data,colMeta:S.colMeta,condFmt:S.condFmt,
    filters:S.filters,sort:S.sort,theme:S.theme,lang:S.lang,lock:S.lock,trial:S.trial,lastBackup:S.lastBackup,
    totalsOn:S.totalsOn,totalsColOn:S.totalsColOn,totalsAgg:S.totalsAgg,hdr:S.hdr,hdrColColor:S.hdrColColor,hdrRowColor:S.hdrRowColor,btnColor:S.btnColor,accColor:S.accColor}));
- }catch(e){toast(t('idbErr'),'err');return;}
+ }catch(e){if(!window.__lsW){window.__lsW=1;toast(t('lsErr'),'err');}return;}
  try{pTouch();}catch(e2){}
 }
 /* ============ history (undo/redo) ============ */
@@ -3513,7 +3517,7 @@ function renderTable(){
  var tbl=$('mainTable');tbl.innerHTML='';
  var thead=document.createElement('thead');
  var tr=document.createElement('tr');
- var th0=document.createElement('th');th0.className='corner'+(selAll()?' allSel':'');th0.textContent='#';th0.title=LL('تحديد الكل','Select all');tr.appendChild(th0);
+ var th0=document.createElement('th');th0.className='corner'+(selAll()?' allSel':'');th0.title=LL('تحديد الكل','Select all');var fb=document.createElement('button');fb.id='fsBtn';fb.type='button';fb.className='fsCorner';fb.innerHTML=fsIs()?FS_OUT:FS_IN;fb.title=fsIs()?pL('خروج من ملء الشاشة','Exit fullscreen'):pL('ملء الشاشة','Fullscreen');fb.onclick=function(e){e.stopPropagation();e.preventDefault();fsToggle();};fb.onmousedown=fb.ontouchstart=function(e){e.stopPropagation();};th0.appendChild(fb);var hs=document.createElement('div');hs.textContent='#';th0.appendChild(hs);tr.appendChild(th0);fsUpd();
  var visCols=0;for(var vc=0;vc<S.cols;vc++)if(!S.colMeta[vc].hidden)visCols++;var vi=0;
  for(var c=0;c<S.cols;c++){
   if(S.colMeta[c].hidden)continue;
@@ -5308,12 +5312,13 @@ function licBoot(){
  fbBtn();
  (function(){
   var mq=window.matchMedia?window.matchMedia('(max-width:640px)'):{matches:false};
-  var tw=$('tableWrap'),hd=$('hdrHandle'),last=0,col=false;
+  var tw=$('tableWrap'),hd=$('hdrHandle'),last=0,col=false,lockT=0;
   if(!tw||!hd)return;
   $('hdrHandleTx').textContent=pL('القائمة','Menu');
-  function setC(c){col=c;document.body.classList.toggle('mCollapsed',!!(c&&mq.matches));if(c)try{window.scrollTo(0,0);}catch(e){}}
+  function setC(c){col=c;lockT=Date.now()+600;document.body.classList.toggle('mCollapsed',!!(c&&mq.matches));if(c)try{window.scrollTo(0,0);}catch(e){}}
   function can(){
    if(!mq.matches||tw.offsetParent===null)return false;
+   if(!col&&tw.scrollHeight<=window.innerHeight-20)return false;
    if(document.querySelector('.overlay:not([hidden])'))return false;
    var l=$('licLock');if(l&&!l.hidden)return false;
    var a=document.activeElement;if(a&&a.closest&&a.closest('#appHeader,#projHdr,#gridCtl,#toolbar'))return false;
@@ -5321,6 +5326,7 @@ function licBoot(){
   }
   tw.addEventListener('scroll',function(){
    var st=tw.scrollTop;
+   if(Date.now()<lockT){last=st;return;}
    if(!col&&st>40&&st>last+6&&can())setC(true);
    else if(col&&st<=0&&last>st)setC(false);
    last=st;
@@ -5330,6 +5336,29 @@ function licBoot(){
   });
   hd.onclick=function(){setC(false);try{window.scrollTo(0,0);}catch(e){}};
   if(mq.addEventListener)mq.addEventListener('change',function(){if(!mq.matches)document.body.classList.remove('mCollapsed');else if(col)document.body.classList.add('mCollapsed');});
+ })();
+ (function(){
+  var tw=$('tableWrap'),tb=$('mainTable'),chip=$('zoomChip');if(!tw||!tb||!chip)return;
+  var Z=1,MIN=0.5,MAX=2.5,g=null,until=0;
+  function apply(z){Z=Math.max(MIN,Math.min(MAX,z));tb.style.zoom=Z===1?'':Z;chip.textContent=Math.round(Z*100)+'% ↺';chip.style.display=Z===1?'none':'block';}
+  function dist(t){var dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+  tw.addEventListener('touchstart',function(e){
+   if(e.touches.length===2){var r=tw.getBoundingClientRect();g={d:dist(e.touches),z:Z,fx:(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,fy:(e.touches[0].clientY+e.touches[1].clientY)/2-r.top};until=Date.now()+600;}
+  },{passive:true});
+  tw.addEventListener('touchmove',function(e){
+   if(!g||e.touches.length!==2)return;
+   e.preventDefault();until=Date.now()+600;
+   var old=Z;apply(g.z*dist(e.touches)/g.d);var k=Z/old;if(k===1)return;
+   var rtl=getComputedStyle(tw).direction==='rtl';
+   if(rtl){var off=tw.scrollLeft+g.fx-tw.clientWidth;tw.scrollLeft=off*k-g.fx+tw.clientWidth;}
+   else tw.scrollLeft=(tw.scrollLeft+g.fx)*k-g.fx;
+   tw.scrollTop=(tw.scrollTop+g.fy)*k-g.fy;
+  },{passive:false});
+  function end(e){if(g&&e.touches.length<2){g=null;until=Date.now()+500;}}
+  tw.addEventListener('touchend',end,{passive:true});tw.addEventListener('touchcancel',end,{passive:true});
+  tw.addEventListener('click',function(e){if(Date.now()<until){e.stopPropagation();e.preventDefault();}},true);
+  chip.onclick=function(){apply(1);};
+  window.__zoomApply=apply;
  })();
  window.addEventListener('online',licSync);
  document.addEventListener('visibilitychange',function(){if(!document.hidden){licTick();licApply();licSync();}});
@@ -5546,6 +5575,20 @@ function wireAll(){
 /* ============ project manager ============ */
 var PKEY='say_table_projects_v1', PPFX='say_table_proj_';
 var PGLOBAL=['lang','theme','lock','trial','lastBackup','btnColor','accColor'];
+/* fullscreen toggle (corner cell) */
+function fsIs(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+var FS_IN='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+var FS_OUT='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+function fsUpd(){var b=document.getElementById('fsBtn');if(!b)return;b.innerHTML=fsIs()?FS_OUT:FS_IN;b.title=fsIs()?pL('خروج من ملء الشاشة','Exit fullscreen'):pL('ملء الشاشة','Fullscreen');}
+function fsToggle(){
+ var de=document.documentElement,rq=de.requestFullscreen||de.webkitRequestFullscreen;
+ if(!rq){toast(pL('متصفحك لا يدعم ملء الشاشة. على الآيفون: مشاركة ثم إضافة إلى الشاشة الرئيسية','Fullscreen not supported here. On iPhone: Share, then Add to Home Screen'),'warn');return;}
+ try{
+  if(fsIs()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
+  else{var p=rq.call(de);if(p&&p.catch)p.catch(function(){toast(pL('تعذر ملء الشاشة','Fullscreen failed'),'err');});}
+ }catch(e){toast(pL('تعذر ملء الشاشة','Fullscreen failed'),'err');}
+}
+document.addEventListener('fullscreenchange',fsUpd);document.addEventListener('webkitfullscreenchange',fsUpd);
 function pL(a,e){return S.lang==='ar'?a:e;}
 function pid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function pReg(){try{var r=JSON.parse(localStorage.getItem(PKEY));if(r&&r.list&&r.list.length&&r.active)return r;}catch(e){}return null;}
