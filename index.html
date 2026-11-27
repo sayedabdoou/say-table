@@ -504,8 +504,8 @@ th.colTotHead{color:var(--headTx)}
 /* v52 total toggles styled like top buttons */
 label.tglWrap{background:var(--headBg);color:var(--headTx);border:0;font-weight:800;background-image:var(--gH)!important;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 /* v53 header strips = toolbar button height */
-:root{--hT:35px}
-@media(max-width:640px){:root{--hT:29px}}
+:root{--hT:28px}
+@media(max-width:640px){:root{--hT:24px}}
 thead tr{height:auto}
 thead th{height:calc(var(--hT) - 1px)}
 .colHead{flex-direction:row;padding:0 8px;gap:5px;justify-content:center;align-items:center;height:calc(var(--hT) - 1px);min-height:0;line-height:1.1}
@@ -539,7 +539,15 @@ td.addColBar{min-width:var(--hT);width:var(--hT);max-width:var(--hT);font-size:1
 #genModal .modalCard:has(#hdrColColorIn) input[type=color]{height:26px;min-height:0;padding:1px 3px;border-radius:8px}
 #genModal .modalCard:has(#hdrColColorIn) .btnsRow{margin-top:4px!important;gap:6px}
 #genModal .modalCard:has(#hdrColColorIn) .btnsRow .pill{padding:5px 10px;font-size:11.5px}
+input[type=range],input[type=color]{direction:ltr}
 #genModal .modalCard:has(#hdrColColorIn) input[type=range]{accent-color:var(--ink);width:100%;height:20px;margin:0}
+/* v56 collapsible totals */
+th.colTotHead{cursor:pointer;white-space:nowrap}
+tr.totalRow th.rowh{cursor:pointer;font-size:11px;white-space:nowrap}
+th.colTotHead.totHid,td.colTot.totHid{min-width:18px;width:18px;max-width:18px;padding:0;font-size:11px}
+tr.totalRow.totRowHid td,tr.totalRow.totRowHid th.rowh{height:18px;padding:0;line-height:1;font-size:11px;overflow:hidden}
+tr.totalRow.totRowHid td{font-size:0}
+tr.totalRow.totRowHid{height:18px}
 </style>
 </head>
 <body>
@@ -3201,7 +3209,7 @@ var KEY='say_table_pro_v1', OLDKEY='say_table_final_v1';
 var MAXR=100, MAXC=100, TRIAL_DAYS=3;
 var S={rows:10,cols:10,data:[],colMeta:[],condFmt:[],filters:[],sort:null,theme:'light',lang:'ar',
 lock:{on:false,hash:''},trial:{start:0,activated:false,plan:''},lastBackup:0,totalsOn:false,totalsColOn:false,totalsAgg:{},
-view:'table',kbCol:-1,bgColor:'',bgImg:'',bgFade:70,hdrColColor:'',hdrRowColor:'',btnColor:'',accColor:'',hdr:{name:'',date:'',dept:'',person:'',addr:''}};
+view:'table',kbCol:-1,bgColor:'',bgImg:'',bgFade:70,totColHide:false,totRowHide:false,hdrColColor:'',hdrRowColor:'',btnColor:'',accColor:'',hdr:{name:'',date:'',dept:'',person:'',addr:''}};
 var SEL={r:0,c:0,r2:0,c2:0};
 var hist=[],histIdx=-1,pendingSnap=null;
 
@@ -3233,7 +3241,7 @@ function load(){
    S.data=o.data||[];S.colMeta=o.colMeta||[];S.condFmt=o.condFmt||[];S.filters=o.filters||[];
    S.sort=o.sort||null;S.theme=o.theme||'light';S.lang=o.lang||'ar';
    S.lock=o.lock||{on:false,hash:''};S.trial=o.trial||{start:0,activated:false,plan:''};
-   S.hdr=normHdr(o.hdr);S.bgColor=/^#[0-9a-fA-F]{6}$/.test(o.bgColor||'')?o.bgColor:'';S.bgImg=typeof o.bgImg==='string'?o.bgImg:'';S.bgFade=(typeof o.bgFade==='number'&&o.bgFade>=10&&o.bgFade<=100)?o.bgFade:70;S.hdrColColor=o.hdrColColor||'';S.hdrRowColor=o.hdrRowColor||'';S.btnColor=/^#[0-9a-fA-F]{6}$/.test(o.btnColor||'')?o.btnColor:'';S.accColor=/^#[0-9a-fA-F]{6}$/.test(o.accColor||'')?o.accColor:'';S.lastBackup=o.lastBackup||0;S.totalsOn=!!o.totalsOn;S.totalsColOn=!!o.totalsColOn;S.totalsAgg=o.totalsAgg||{};
+   S.hdr=normHdr(o.hdr);S.totColHide=!!o.totColHide;S.totRowHide=!!o.totRowHide;S.bgColor=/^#[0-9a-fA-F]{6}$/.test(o.bgColor||'')?o.bgColor:'';S.bgImg=typeof o.bgImg==='string'?o.bgImg:'';S.bgFade=(typeof o.bgFade==='number'&&o.bgFade>=10&&o.bgFade<=100)?o.bgFade:70;S.hdrColColor=o.hdrColColor||'';S.hdrRowColor=o.hdrRowColor||'';S.btnColor=/^#[0-9a-fA-F]{6}$/.test(o.btnColor||'')?o.btnColor:'';S.accColor=/^#[0-9a-fA-F]{6}$/.test(o.accColor||'')?o.accColor:'';S.lastBackup=o.lastBackup||0;S.totalsOn=!!o.totalsOn;S.totalsColOn=!!o.totalsColOn;S.totalsAgg=o.totalsAgg||{};
    S.view='table';S.kbCol=-1;
   }else{
    var old=localStorage.getItem(OLDKEY);
@@ -3259,7 +3267,7 @@ function save(){
  try{
   localStorage.setItem(KEY,JSON.stringify({v:2,rows:S.rows,cols:S.cols,data:S.data,colMeta:S.colMeta,condFmt:S.condFmt,
    filters:S.filters,sort:S.sort,theme:S.theme,lang:S.lang,lock:S.lock,trial:S.trial,lastBackup:S.lastBackup,
-   totalsOn:S.totalsOn,totalsColOn:S.totalsColOn,totalsAgg:S.totalsAgg,hdr:S.hdr,hdrColColor:S.hdrColColor,hdrRowColor:S.hdrRowColor,btnColor:S.btnColor,accColor:S.accColor,bgColor:S.bgColor,bgImg:S.bgImg,bgFade:S.bgFade}));
+   totalsOn:S.totalsOn,totalsColOn:S.totalsColOn,totalsAgg:S.totalsAgg,hdr:S.hdr,hdrColColor:S.hdrColColor,hdrRowColor:S.hdrRowColor,btnColor:S.btnColor,accColor:S.accColor,bgColor:S.bgColor,bgImg:S.bgImg,bgFade:S.bgFade,totColHide:S.totColHide,totRowHide:S.totRowHide}));
  }catch(e){if(!window.__lsW){window.__lsW=1;toast(t('lsErr'),'err');}return;}
  try{pTouch();}catch(e2){}
 }
@@ -3659,7 +3667,7 @@ function renderTable(){
   th.draggable=true;th.setAttribute('data-col',c);
   th.appendChild(hd);tr.appendChild(th);
  }
- if(S.totalsColOn){var thTot=document.createElement('th');thTot.className='colTotHead';thTot.textContent='Σ';if(S.hdrColColor){var shT=hdrShade(S.hdrColColor,Math.max(0,visCols-1),visCols);thTot.style.background=shT.bg;thTot.style.color=shT.fg;}tr.appendChild(thTot);}
+ if(S.totalsColOn){var thTot=document.createElement('th');thTot.className='colTotHead'+(S.totColHide?' totHid':'');thTot.textContent=S.totColHide?'▸':'Σ ◂';thTot.title=pL(S.totColHide?'إظهار الإجمالي':'إخفاء الإجمالي',S.totColHide?'Show totals':'Hide totals');if(S.hdrColColor){var shT=hdrShade(S.hdrColColor,Math.max(0,visCols-1),visCols);thTot.style.background=shT.bg;thTot.style.color=shT.fg;}tr.appendChild(thTot);}
  var thAdd=document.createElement('th');thAdd.className='addCol';thAdd.textContent='+';thAdd.title='+';thAdd.id='inlineAddCol';if(S.hdrColColor){thAdd.style.background=hdrBase(S.hdrColColor);thAdd.style.color='#fff';}tr.appendChild(thAdd);
  thead.appendChild(tr);tbl.appendChild(thead);
  var tb=document.createElement('tbody');
@@ -3694,10 +3702,10 @@ function renderTable(){
    tr.appendChild(td);
   }
   if(S.totalsColOn){
-   var tdc=document.createElement('td');tdc.className='colTot';
+   var tdc=document.createElement('td');tdc.className='colTot'+(S.totColHide?' totHid':'');
    if(S.hdrRowColor){var shc2=hdrShade(S.hdrRowColor,r,S.rows);tdc.style.background=shc2.bg;tdc.style.color=shc2.fg;}
    var rvals=[];for(var rc=0;rc<S.cols;rc++){if(S.colMeta[rc].hidden)continue;var rnv=numericValue(S.data[r][rc],r,rc);if(rnv!==null)rvals.push(rnv);}
-   if(rvals.length){var rsum=rvals.reduce(function(a,b){return a+b;},0);tdc.textContent=Math.round(rsum*100)/100;}
+   if(rvals.length&&!S.totColHide){var rsum=rvals.reduce(function(a,b){return a+b;},0);tdc.textContent=Math.round(rsum*100)/100;}
    tr.appendChild(tdc);
   }
   if(vis&&!tb._bar){tb._bar=1;var nv=0;for(var q2=0;q2<S.rows;q2++)if(rowVisible(q2))nv++;
@@ -3714,9 +3722,9 @@ function renderTable(){
  setTimeout(fitAllImgs,0);setTimeout(fitAllImgs,300);
  /* totals row */
  if(S.totalsOn){
-  var trt=document.createElement('tr');trt.className='totalRow';
+  var trt=document.createElement('tr');trt.className='totalRow'+(S.totRowHide?' totRowHid':'');
   var totVis=0,totVi=0;for(var tv=0;tv<S.cols;tv++)if(!S.colMeta[tv].hidden)totVis++;
-  var tht=document.createElement('th');tht.className='rowh';tht.textContent='Σ';if(S.hdrRowColor){tht.style.background=hdrBase(S.hdrRowColor);tht.style.color='#fff';}trt.appendChild(tht);
+  var tht=document.createElement('th');tht.className='rowh';tht.textContent=S.totRowHide?'▾':'Σ ▴';tht.title=pL(S.totRowHide?'إظهار الإجمالي':'إخفاء الإجمالي',S.totRowHide?'Show totals':'Hide totals');if(S.hdrRowColor){tht.style.background=hdrBase(S.hdrRowColor);tht.style.color='#fff';}trt.appendChild(tht);
   for(var c3=0;c3<S.cols;c3++){
    if(S.colMeta[c3].hidden)continue;
    var tdt=document.createElement('td');tdt.setAttribute('data-total',c3);
@@ -3734,14 +3742,14 @@ function renderTable(){
     if(typeof out==='number')out=Math.round(out*100)/100;
     out=t(agg)+': '+out;
    }else out=t(agg)+': —';
-   tdt.textContent=out;
+   tdt.textContent=S.totRowHide?'':out;
    trt.appendChild(tdt);
   }
   if(S.totalsColOn){
-   var tdg=document.createElement('td');tdg.className='colTot';
+   var tdg=document.createElement('td');tdg.className='colTot'+(S.totColHide?' totHid':'');
    if(S.hdrColColor){var shg=hdrShade(S.hdrColColor,Math.max(0,totVis-1),totVis);tdg.style.background=shg.bg;tdg.style.color=shg.fg;}
    var gvals=[];for(var gr=0;gr<S.rows;gr++){if(!rowVisible(gr))continue;for(var gc2=0;gc2<S.cols;gc2++){if(S.colMeta[gc2].hidden)continue;var gnv=numericValue(S.data[gr][gc2],gr,gc2);if(gnv!==null)gvals.push(gnv);}}
-   if(gvals.length){var gsum=gvals.reduce(function(a,b){return a+b;},0);tdg.textContent=Math.round(gsum*100)/100;}
+   if(gvals.length&&!S.totColHide&&!S.totRowHide){var gsum=gvals.reduce(function(a,b){return a+b;},0);tdg.textContent=Math.round(gsum*100)/100;}
    trt.appendChild(tdg);
   }
   tb.appendChild(trt);
@@ -4110,6 +4118,17 @@ document.addEventListener('click',function(e){
   dropFiles(e.dataTransfer.files,parseInt(td.getAttribute('data-r'),10),parseInt(td.getAttribute('data-c'),10));
  },true);
  window.addEventListener('dragend',clearHi);
+})();
+/* v56 collapse / expand totals */
+(function(){var tbl=document.getElementById('mainTable');if(!tbl)return;
+ tbl.addEventListener('click',function(e){
+  var h=e.target.closest&&e.target.closest('th.colTotHead');
+  var r=e.target.closest&&e.target.closest('tr.totalRow th.rowh');
+  if(!h&&!r)return;
+  e.stopPropagation();e.preventDefault();
+  if(h)S.totColHide=!S.totColHide;else S.totRowHide=!S.totRowHide;
+  save();renderTable();
+ },true);
 })();
 function renderVidPrev(){
  var w=$('ceVidPrevWrap');if(!w)return;
