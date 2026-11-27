@@ -153,7 +153,8 @@ th.rowh:hover .rowResizer{background:rgba(28,166,76,.55)}
 .pillTag{display:inline-block;padding:3px 13px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}
 .stars{color:#f59e0b;font-size:14px;letter-spacing:1px}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px;direction:ltr;unicode-bidi:embed}
-.fileChip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.fileChip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 11px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.fileChip[data-fopen]{cursor:pointer;text-decoration:underline;color:#1d4fb8}
 td a{color:var(--acc);font-weight:700}
 /* ---------- kanban ---------- */
 #kanbanWrap{padding:6px 14px;overflow:auto;max-height:calc(100vh - 300px)}
@@ -460,6 +461,17 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
  body.mCollapsed #hdrHandle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:22px;border:0;background:var(--ink);color:var(--onink);font-size:11px;font-weight:800;cursor:pointer;padding:0}
  body.mCollapsed #tableWrap{max-height:calc(100vh - 26px);max-height:calc(100dvh - 26px)}
 }
+/* soft gradient on theme-coloured buttons (solid colour kept as fallback) */
+html{--inkG:linear-gradient(135deg,var(--ink) 0%,color-mix(in srgb,var(--ink) 78%,#fff) 100%);--accG:linear-gradient(135deg,var(--acc) 0%,color-mix(in srgb,var(--acc) 78%,#fff) 100%)}
+.pill.black,.iconPill,.sizePill,#toolbar .pill.white,#toolbar .viewSwitch,#statusBar,.modalCard h3 .x{background-image:var(--inkG)}
+.pill.green,#toolbar .viewSwitch button.on{background-image:var(--accG)}
+.pill.black,.pill.green,.iconPill,#toolbar .pill.white{box-shadow:0 1px 3px rgba(0,0,0,.18)}
+/* toolbar buttons follow the colour settings */
+#toolbar .pill.white{background:var(--ink);color:var(--onink);border-color:var(--ink)}
+#toolbar .pill.white #tbClear,#toolbar #tbClear{color:var(--onink)!important}
+#toolbar .viewSwitch{background:var(--ink);border-color:var(--ink)}
+#toolbar .viewSwitch button{color:var(--onink);opacity:.72}
+#toolbar .viewSwitch button.on{background:var(--acc);color:var(--onacc,#fff);opacity:1}
 .pill.rec{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important}
 </style>
 </head>
@@ -3253,6 +3265,20 @@ function sha256(str){
  var h=0;for(var i=0;i<str.length;i++){h=((h<<5)-h+str.charCodeAt(i))|0;}
  return Promise.resolve('f'+h);
 }
+var FMIME={txt:'text/plain;charset=utf-8',csv:'text/plain;charset=utf-8',json:'text/plain;charset=utf-8',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',webp:'image/webp',mp4:'video/mp4',mp3:'audio/mpeg'};
+function openStoredFile(id){
+ var w=null;try{w=window.open('','_blank');}catch(e){}
+ idb.get(id).then(function(rec){
+  if(!rec||!rec.blob){if(w)try{w.close();}catch(e){}toast(pL('الملف مش موجود على الجهاز ده. الملفات بتتحفظ على الجهاز اللي اترفعت منه.','File not found on this device. Files are stored on the device that uploaded them.'),'err');return;}
+  var nm=rec.name||'file',ext=(nm.split('.').pop()||'').toLowerCase();
+  var ty=(rec.mime&&rec.mime!=='application/octet-stream')?rec.mime:(FMIME[ext]||'application/octet-stream');
+  if(ext==='txt'||ext==='csv')ty='text/plain;charset=utf-8';
+  var blob=new Blob([rec.blob],{type:ty});
+  var viewable=/^(image\/|video\/|audio\/|text\/plain)/.test(ty)||ty==='application/pdf';
+  if(viewable&&w){var u=URL.createObjectURL(blob);try{w.location.href=u;}catch(e){downloadBlob(blob,nm);}setTimeout(function(){URL.revokeObjectURL(u);},60000);}
+  else{if(w)try{w.close();}catch(e){}downloadBlob(blob,nm);toast(pL('تم تنزيل الملف','File downloaded'));}
+ });
+}
 function downloadBlob(blob,name){var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},600);}
 function isMediaType(ty){return ty==='image'||ty==='camera'||ty==='video'||ty==='audio'||ty==='file';}
 function isIdbRef(v){return typeof v==='string'&&v.indexOf('idb:')===0;}
@@ -3389,11 +3415,11 @@ function cellHTML(cell,r,c){
    if(isIdbRef(v))return '<img class="cellImg" data-idb="'+esc(idbId(v))+'" alt="">';
    return '<img class="cellImg" src="'+esc(v)+'" alt="">';
   case 'video':
-   if(isIdbRef(v))return '<span class="fileChip">🎬 <span data-idb-name="'+esc(idbId(v))+'">video</span></span>';
+   if(isIdbRef(v))return '<span class="fileChip" data-fopen="'+esc(idbId(v))+'">🎬 <span data-idb-name="'+esc(idbId(v))+'">video</span></span>';
    if(/youtube|youtu\.be/.test(v))return '<span style="color:var(--acc)">▶️ YouTube</span>';
    return '<video src="'+esc(v)+'" style="max-width:96px;max-height:60px" muted></video>';
   case 'audio':return '<span class="fileChip">🎤 <span data-i18n="tAudio">'+t('tAudio')+'</span></span>';
-  case 'file':return '<span class="fileChip">📎 <span data-idb-name="'+esc(isIdbRef(v)?idbId(v):'')+'">'+esc(isIdbRef(v)?'file':String(v).slice(0,16))+'</span></span>';
+  case 'file':return '<span class="fileChip"'+(isIdbRef(v)?' data-fopen="'+esc(idbId(v))+'"':'')+'>📎 <span data-idb-name="'+esc(isIdbRef(v)?idbId(v):'')+'">'+esc(isIdbRef(v)?'file':String(v).slice(0,16))+'</span></span>';
   case 'qr':return '<canvas class="qrMini" width="52" height="52" data-qr="'+esc(v)+'" style="border-radius:6px"></canvas>';
   case 'formula':return '<span class="mono">'+esc(v)+' = '+esc(displayValue(cell,r,c))+'</span>';
   case 'bool':return (v==='true'||v===true)?'<span style="color:var(--ok);font-size:16px">✅</span>':'<span style="color:var(--danger);font-size:16px">❌</span>';
@@ -3660,7 +3686,7 @@ function afterRenderMedia(){
  var imgs=document.querySelectorAll('img[data-idb]');
  for(var j=0;j<imgs.length;j++){(function(img){blobURL(img.getAttribute('data-idb')).then(function(u){if(u)img.src=u;});})(imgs[j]);}
  var names=document.querySelectorAll('[data-idb-name]');
- for(var k=0;k<names.length;k++){(function(el){var id=el.getAttribute('data-idb-name');if(!id)return;idb.get(id).then(function(rec){if(rec&&rec.name)el.textContent=rec.name.length>16?rec.name.slice(0,14)+'…':rec.name;});})(names[k]);}
+ for(var k=0;k<names.length;k++){(function(el){var id=el.getAttribute('data-idb-name');if(!id)return;idb.get(id).then(function(rec){if(rec&&rec.name)el.textContent=rec.name.length>26?rec.name.slice(0,12)+'…'+rec.name.slice(-12):rec.name;el.title=rec.name;});})(names[k]);}
 }
 function renderStatus(){
  var filled=0,imgs=0,files=0,auds=0,vis=0;
@@ -3675,11 +3701,24 @@ function renderStatus(){
  $('statusBar').innerHTML='<span><b lang="en" dir="ltr" class="num">'+S.rows+'</b> '+t('stRows')+'</span><span><b lang="en" dir="ltr" class="num">'+S.cols+'</b> '+t('stCols')+'</span><span><b lang="en" dir="ltr" class="num">'+filled+'</b> '+t('stFilled')+'</span><span><b lang="en" dir="ltr" class="num">'+imgs+'</b> '+t('stImgs')+'</span><span><b lang="en" dir="ltr" class="num">'+files+'</b> '+t('stFiles')+'</span><span><b lang="en" dir="ltr" class="num">'+auds+'</b> '+t('stAudio')+'</span>'+(vis<S.rows?'<span><b lang="en" dir="ltr" class="num">'+vis+'</b> '+t('stVisible')+'</span>':'');
 }
 /* ============ real QR via embedded qrcode-generator ============ */
+function qrUtf8(str){
+ var out=[];
+ for(var i=0;i<str.length;i++){
+  var c=str.charCodeAt(i);
+  if(c>=0xD800&&c<=0xDBFF&&i+1<str.length){var d=str.charCodeAt(i+1);if(d>=0xDC00&&d<=0xDFFF){c=0x10000+((c-0xD800)<<10)+(d-0xDC00);i++;}}
+  if(c<0x80)out.push(c);
+  else if(c<0x800)out.push(0xC0|(c>>6),0x80|(c&63));
+  else if(c<0x10000)out.push(0xE0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));
+  else out.push(0xF0|(c>>18),0x80|((c>>12)&63),0x80|((c>>6)&63),0x80|(c&63));
+ }
+ return out;
+}
 function qrDraw(canvas,text){
  var ctx=canvas.getContext('2d');
  ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
  if(!text||typeof qrcode==='undefined')return;
  try{
+  qrcode.stringToBytes=qrUtf8;
   var qr=qrcode(0,'M');qr.addData(text);qr.make();
   var n=qr.getModuleCount(),cell=Math.floor(Math.min(canvas.width,canvas.height)/(n+2));
   var off=Math.floor((canvas.width-cell*n)/2);
@@ -4251,6 +4290,8 @@ function wireTable(){
  var lastTap=0,lastKey='';
  tbl.addEventListener('click',function(e){
   if(suppressClick){e.stopImmediatePropagation();e.preventDefault();suppressClick=false;return;}
+  var fch=e.target.closest('[data-fopen]');
+  if(fch){e.preventDefault();e.stopPropagation();openStoredFile(fch.getAttribute('data-fopen'));return;}
   var mb=e.target.closest('[data-colmenu]');
   if(mb){openColMenu(parseInt(mb.getAttribute('data-colmenu'),10),mb);return;}
   var rmb=e.target.closest('[data-rowmenu]');
@@ -4563,7 +4604,24 @@ function openGen(html,wide){
  card.className='modalCard'+(wide?' wide':'');
  card.innerHTML=html;
  $('genModal')._shownAt=Date.now();$('genModal').hidden=false;
+ eyeify();
 }
+function eyeify(){
+ var L=document.querySelectorAll('input[type=password],input[data-eye]');
+ for(var i=0;i<L.length;i++){(function(inp){
+  if(inp._eyed)return;inp._eyed=true;
+  inp.setAttribute('data-eye','1');inp.type='password';
+  var w=document.createElement('span');w.style.cssText='position:relative;display:block;flex:1;min-width:0;width:100%';
+  inp.parentNode.insertBefore(w,inp);w.appendChild(inp);
+  var side=(inp.getAttribute('dir')==='ltr')?'right':'left';
+  inp.style['padding'+(side==='right'?'Right':'Left')]='42px';
+  var b=document.createElement('button');b.type='button';b.setAttribute('aria-label','show');b.textContent='👁';
+  b.style.cssText='position:absolute;top:50%;transform:translateY(-50%);'+side+':6px;border:0;background:transparent;font-size:18px;line-height:1;padding:6px;cursor:pointer;opacity:.7';
+  b.onclick=function(e){e.preventDefault();e.stopPropagation();var show=inp.type==='password';inp.type=show?'text':'password';b.textContent=show?'🙈':'👁';b.style.opacity=show?'1':'.7';};
+  w.appendChild(b);
+ })(L[i]);}
+}
+window.addEventListener('load',function(){eyeify();});
 function closeOverlay(id){$(id).hidden=true;stopDict();stopCam();stopRec(false);if(typeof stopVidRec==='function')stopVidRec(false);}
 function closeAllOverlays(){
  var os=document.querySelectorAll('.overlay');
@@ -5341,7 +5399,7 @@ function openActivation(blocking){
  else if(st.s==='trial')info=pL('أنت في الفترة التجريبية. أدخل كود التفعيل لتفعيل التطبيق.','You are on the free trial. Enter an activation code to activate.');
  openGen('<h3>🔑 '+esc(pL('تفعيل التطبيق','Activate the app'))+'<button class="x" data-gc>✕</button></h3>'
   +'<div class="small" style="margin-bottom:8px">'+info+'</div>'
-  +'<label>'+esc(pL('كود التفعيل','Activation code'))+'</label><input type="text" id="actCode" placeholder="SAY-XXXX-XXXX-XXXX" dir="ltr" autocomplete="off" autocapitalize="characters" style="text-align:left">'
+  +'<label>'+esc(pL('كود التفعيل','Activation code'))+'</label><input type="password" data-eye="1" id="actCode" placeholder="SAY-XXXX-XXXX-XXXX" dir="ltr" autocomplete="off" autocapitalize="characters" style="text-align:left">'
   +'<div class="btnsRow"><button class="pill black" id="actGo" style="flex:1;justify-content:center">'+esc(pL('تفعيل','Activate'))+'</button></div>'
   +'<div class="small" id="actErr" style="min-height:16px"></div>');
  wireGenClose();
@@ -5672,7 +5730,7 @@ function renderAll(){
  applyTheme();
  applyStepperColors();
  $('rowCount').value=S.rows;$('colCount').value=S.cols;
- var spl=$('sizePill');if(spl)spl.innerHTML='<span lang="en" dir="ltr" class="num">'+S.rows+'×'+S.cols+'</span>';
+ var spl=$('sizePill');if(spl)spl.innerHTML='<span lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'" class="num" style="display:inline-flex;flex-direction:row;gap:3px;unicode-bidi:isolate"><span dir="ltr">'+S.rows+'</span><span dir="ltr">×</span><span dir="ltr">'+S.cols+'</span></span>';
  $('totalsToggle').checked=S.totalsOn;
  $('totalsColToggle').checked=S.totalsColOn;
  renderHdr();
