@@ -460,6 +460,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
  body.mCollapsed #hdrHandle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:22px;border:0;background:var(--ink);color:var(--onink);font-size:11px;font-weight:800;cursor:pointer;padding:0}
  body.mCollapsed #tableWrap{max-height:calc(100vh - 26px);max-height:calc(100dvh - 26px)}
 }
+.pill.rec{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important}
 </style>
 </head>
 <body>
@@ -3708,7 +3709,7 @@ function markType(){
  for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',bs[i].getAttribute('data-ty')===CE.type);
 }
 function openCell(r,c){
- stopCam();stopRec(false);stopVidRec(false);
+ stopCam();stopRec(false);stopVidRec(false);stopDict();
  CE={r:r,c:c,type:S.data[r][c].type||'text',tempImg:'',audioId:'',fileId:'',fileName:'',videoId:'',videoUrl:'',rec:null,recChunks:[],camStream:null,vstream:null,vrec:null,vchunks:[],rating:0,selVal:'',boolVal:''};
  var cell=S.data[r][c];var v=cell.v;
  if(CE.type==='rating')CE.rating=parseInt(v,10)||0;
@@ -3772,8 +3773,33 @@ function renderCEBody(){
  }else if(ty==='file'){
   h='<button type="button" class="pill black" id="ceFileUp" style="width:100%;justify-content:center;margin-top:6px">📎 '+t('uploadFile')+'</button><div class="small" id="ceFileName" style="text-align:center;margin-top:8px;font-weight:800">'+esc(CE.fileName||'')+'</div><div class="small" style="text-align:center">PDF · DOC · DOCX · XLS · XLSX · ZIP · RAR · TXT · MP3 · MP4</div>';
  }
+
  b.innerHTML=h;
  wireCEBody();
+ if(ty==='text')addDictBtn();
+}
+var DICT=null;
+function stopDict(){if(DICT){try{DICT.stop();}catch(e){}DICT=null;}var b=$('ceMic');if(b){b.classList.remove('rec');b.textContent='🎤 '+pL('إملاء بالصوت','Dictate');}}
+function addDictBtn(){
+ var ta=$('ceText');if(!ta)return;
+ var b=document.createElement('button');b.type='button';b.id='ceMic';b.className='pill white';
+ b.style.cssText='margin-top:8px;width:100%;justify-content:center';
+ b.textContent='🎤 '+pL('إملاء بالصوت','Dictate');
+ var note=document.createElement('div');note.className='small';note.id='ceMicNote';note.style.marginTop='4px';
+ ta.parentNode.insertBefore(b,ta.nextSibling);b.parentNode.insertBefore(note,b.nextSibling);
+ var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ b.onclick=function(){
+  if(DICT){stopDict();note.textContent='';return;}
+  if(!SR){note.textContent=pL('المتصفح ده مش بيدعم الإملاء. استخدم Edge أو Chrome، أو زر المايك في كيبورد الموبايل.','Dictation is not supported here. Use Edge or Chrome, or the keyboard mic.');return;}
+  var r=new SR();r.lang=(S.lang==='ar')?'ar-EG':'en-US';r.continuous=true;r.interimResults=true;
+  var base=ta.value,fin='';
+  var sep=function(x){return x&&!/\s$/.test(x)?' ':'';};
+  r.onresult=function(e){var im='';for(var i=e.resultIndex;i<e.results.length;i++){var tr=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=tr;else im+=tr;}
+   ta.value=base+sep(base)+fin+im;};
+  r.onerror=function(e){var m=e.error;note.textContent=(m==='not-allowed'||m==='service-not-allowed')?pL('اسمح للمتصفح باستخدام المايك ثم جرّب تاني.','Allow microphone access and retry.'):(m==='no-speech'?pL('مسمعتش صوت، جرّب تاني.','No speech heard.'):(m==='network'?pL('محتاج إنترنت للإملاء.','Dictation needs internet.'):pL('تعذر الإملاء: ','Dictation failed: ')+m));};
+  r.onend=function(){if(DICT===r){DICT=null;var mb=$('ceMic');if(mb){mb.classList.remove('rec');mb.textContent='🎤 '+pL('إملاء بالصوت','Dictate');}}};
+  try{r.start();DICT=r;note.textContent=pL('بسمعك... اتكلم، واضغط تاني للإيقاف.','Listening... press again to stop.');b.classList.add('rec');b.textContent='⏹ '+pL('إيقاف','Stop');}catch(e){note.textContent=pL('تعذر تشغيل المايك.','Could not start mic.');}
+ };
 }
 function wireCEBody(){
  var ty=CE.type;
@@ -3978,7 +4004,7 @@ function saveCell(){
  cell.color=(col&&col.toLowerCase()!=='#111111')?col:'';
  cell.bg=(bg&&bg.toLowerCase()!=='#ffffff')?bg:'';
  cell.bold=$('ceBold').checked;
- closeOverlay('cellModal');stopCam();stopRec(false);stopVidRec(false);
+ closeOverlay('cellModal');stopDict();stopCam();stopRec(false);stopVidRec(false);
  renderAll();
 }
 function clearCell(){
@@ -4538,7 +4564,7 @@ function openGen(html,wide){
  card.innerHTML=html;
  $('genModal')._shownAt=Date.now();$('genModal').hidden=false;
 }
-function closeOverlay(id){$(id).hidden=true;stopCam();stopRec(false);if(typeof stopVidRec==='function')stopVidRec(false);}
+function closeOverlay(id){$(id).hidden=true;stopDict();stopCam();stopRec(false);if(typeof stopVidRec==='function')stopVidRec(false);}
 function closeAllOverlays(){
  var os=document.querySelectorAll('.overlay');
  for(var i=0;i<os.length;i++)os[i].hidden=true;
@@ -4559,7 +4585,7 @@ function wireOverlayClose(){
  })(btns[i]);}
  var os=document.querySelectorAll('.overlay');
  for(var j=0;j<os.length;j++){(function(o){
-  o.addEventListener('click',function(e){if(e.target===o){if(o._shownAt&&Date.now()-o._shownAt<500)return;o.hidden=true;stopCam();stopRec(false);}});
+  o.addEventListener('click',function(e){if(e.target===o){if(o._shownAt&&Date.now()-o._shownAt<500)return;o.hidden=true;stopDict();stopCam();stopRec(false);}});
  })(os[j]);}
 }
 function opsSelectHTML(idSel){
@@ -5533,6 +5559,9 @@ function openSettings(m){
    :'<div class="small" style="margin-bottom:6px">'+t('pwOff2')+'</div><input type="password" id="pwSet" placeholder="'+t('pwSet')+'"><div class="btnsRow"><button class="pill black" id="pwSetGo" style="flex:1;justify-content:center">'+t('pwSet')+'</button></div>')
   +'<div class="small">'+t('pwCosmetic')+'</div>'
   +'<label style="margin-top:14px">🙈 '+t('hiddenCols')+'</label><div>'+(hidList||'<span class="small">'+t('none')+'</span>')+'</div>'
+  +'<label style="margin-top:14px">☁️ '+pL('سحابة المالك','Owner cloud')+'</label>'
+  +'<div class="small" style="margin-bottom:6px">'+(clS.refresh?esc(pL('داخل بحساب: ','Signed in: ')+(clS.email||'')):esc(pL('مش مسجّل دخول','Not signed in')))+'</div>'
+  +'<div class="btnsRow"><button class="pill black" id="setCloud" style="flex:1;justify-content:center">☁️ '+pL('فتح السحابة (رفع وتنزيل المشاريع)','Open cloud (upload / download projects)')+'</button></div>'
   +'<label style="margin-top:14px">🚪 '+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</label>'
   +'<div class="btnsRow"><button class="pill white" id="setSignOut" style="flex:1;justify-content:center;color:var(--danger)">'+pL('تسجيل الخروج من هذا الجهاز','Sign out of this device')+'</button></div>'
   +'<div class="btnsRow" style="margin-top:18px"><button class="pill green" id="setBackup" style="flex:1;justify-content:center">💾 '+t('asBackup')+'</button></div>')
@@ -5570,6 +5599,7 @@ function openSettings(m){
    sha256(v).then(function(h){S.lock={on:true,hash:h};save();toast(t('pwDone'));openSettings();});
   };
  }
+ var scl=$('setCloud');if(scl)scl.onclick=openCloud;
  var sbk=$('setBackup');if(sbk)sbk.onclick=function(){$('genModal').hidden=true;exportJSON(true);};
 }
 /* ============ input form ============ */
