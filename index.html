@@ -4189,7 +4189,18 @@ function pickFile(accepts,cb){
  p.onchange=function(){var f=p.files[0];if(!f)return;cb(f,f.name);};
  p.click();
 }
+function ceTypeName(ty){var m={text:['نص','text'],number:['رقم','number'],date:['تاريخ','date'],link:['رابط','link'],formula:['معادلة','formula'],calc:['حاسبة','calculator'],bool:['اختيار','checkbox'],rating:['تقييم','rating'],select:['قائمة اختيار','dropdown'],qr:['QR','QR'],image:['صورة','image'],camera:['كاميرا','camera'],video:['فيديو','video'],audio:['تسجيل صوتي','audio'],file:['ملف مرفق','file']};var a=m[ty]||[ty,ty];return pL(a[0],a[1]);}
 function saveCell(){
+ var cell=S.data[CE.r][CE.c];var ty=CE.type;
+ var oldV=cell.v==null?'':String(cell.v);
+ if(oldV!==''&&cell.type!==ty){
+  var pv=(/^(idb:|data:)/.test(oldV))?ceTypeName(cell.type):oldV.length>40?oldV.slice(0,40)+'...':oldV;
+  uiConfirm(pL('الخلية دي مليانة ("'+pv+'") ونوعها '+ceTypeName(cell.type)+'. لو كملت هيتغير نوعها لـ '+ceTypeName(ty)+' والمحتوى القديم هيتمسح. تقدر ترجع بزر التراجع ↩ بعد الحفظ. تكمل؟','This cell is filled ("'+pv+'") and its type is '+ceTypeName(cell.type)+'. If you continue, its type becomes '+ceTypeName(ty)+' and the old content is replaced. You can undo with ↩ afterwards. Continue?'),saveCellDo);
+  return;
+ }
+ saveCellDo();
+}
+function saveCellDo(){
  var cell=S.data[CE.r][CE.c];var ty=CE.type;var v='';
  if(ty==='text')v=$('ceText').value;
  else if(ty==='number')v=$('ceNum').value;
