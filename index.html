@@ -525,8 +525,7 @@ tr:has(>td.addRow:not(.addColBar)){height:var(--hT)}
 td.addColBar{min-width:var(--hT);width:var(--hT);max-width:var(--hT);font-size:18px}
 .rowMenuBtn{font-size:9px;padding:1px 2px}
 /* v55 table background + compact colours window */
-#tableWrap.bgOn{background-repeat:no-repeat;background-position:center;background-size:cover}
-#tableWrap.bgOn table{background:transparent}
+#tableWrap.bgOn table{background-repeat:no-repeat;background-position:center;background-size:100% 100%}
 #tableWrap.bgOn td:not(.colTot):not(.addRow):not([data-total]){background-color:color-mix(in srgb,var(--card) var(--cellA,70%),transparent)}
 #tableWrap.bgOn td.selr:not(.colTot){background-color:color-mix(in srgb,var(--accSoft) var(--cellA,70%),transparent)}
 #genModal .modalCard:has(#hdrColColorIn){padding:10px 14px 12px}
@@ -5934,13 +5933,13 @@ function pickBgImage(cb){
  p.click();
 }
 function applyBg(){
- var tw=$('tableWrap');if(!tw)return;
+ var tw=$('tableWrap');if(!tw)return;var tb=$('mainTable')||tw;
  var on=!!(S.bgColor||S.bgImg);
  tw.classList.toggle('bgOn',on);
  tw.style.setProperty('--cellA',(S.bgFade||70)+'%');
- tw.style.backgroundColor=S.bgColor||'';
- if(S.bgImg){var want=S.bgImg;blobURL(want).then(function(u){if(u&&S.bgImg===want)tw.style.backgroundImage='url("'+u+'")';});}
- else tw.style.backgroundImage='';
+ tw.style.backgroundColor='';tw.style.backgroundImage='';tb.style.backgroundColor=S.bgColor||'';
+ if(S.bgImg){var want=S.bgImg;blobURL(want).then(function(u){if(u&&S.bgImg===want)tb.style.backgroundImage='url("'+u+'")';});}
+ else tb.style.backgroundImage='';
 }
 function applyTotalToggleColors(){
  var pr=[['totalsToggle',S.hdrColColor],['totalsColToggle',S.hdrRowColor]];
