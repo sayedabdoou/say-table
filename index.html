@@ -464,7 +464,8 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 /* edge-dark to centre-light gradient on theme-coloured elements (overlay, works over any colour) */
 html{--gE:rgba(0,0,0,.34);--gC:rgba(255,255,255,.32);--gH:linear-gradient(90deg,var(--gE) 0%,var(--gC) 50%,var(--gE) 100%);--gV:linear-gradient(180deg,var(--gE) 0%,var(--gC) 50%,var(--gE) 100%);--gR:radial-gradient(closest-side,var(--gC) 0%,var(--gE) 100%)}
 .pill.black,.pill.green,#toolbar .pill.white,.sizePill,#statusBar,.modalCard h3 .x,#toolbar .viewSwitch,#toolbar .viewSwitch button.on,thead th,th.addCol{background-image:var(--gH)!important}
-.iconPill,thead th.corner,th.corner .fsCorner{background-image:var(--gR)!important}
+.iconPill{background-image:var(--gH)!important}
+thead th.corner,th.corner .fsCorner{background-image:var(--gR)!important}
 th.rowh{background-image:var(--gV)!important}
 .pill.black,.pill.green,.iconPill,#toolbar .pill.white{box-shadow:0 1px 3px rgba(0,0,0,.2)}
 /* toolbar buttons follow the colour settings */
@@ -474,6 +475,27 @@ th.rowh{background-image:var(--gV)!important}
 #toolbar .viewSwitch button{color:var(--onink);opacity:.72}
 #toolbar .viewSwitch button.on{background:var(--acc);color:var(--onacc,#fff);opacity:1}
 .pill.rec{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important}
+/* v48 grid-only fullscreen */
+body.gridFs #appHeader,body.gridFs #toolbar,body.gridFs #gridCtl,body.gridFs #tipBanner,body.gridFs #projHdr,body.gridFs #hdrHandle,body.gridFs #statusBar,body.gridFs #kanbanWrap,body.gridFs #zoomChip{display:none!important}
+body.gridFs #tableWrap{border:0!important;box-shadow:none!important;margin:0!important;max-height:100vh;max-height:100dvh;height:100vh;height:100dvh;border-radius:0;padding:0}
+body.gridFs{overflow:hidden}
+#fsExitX{display:none}
+body.gridFs #fsExitX{display:flex;position:fixed;bottom:12px;left:12px;z-index:80;width:34px;height:34px;border-radius:50%;border:2px solid var(--onink);background:var(--ink);background-image:var(--gH);color:var(--onink);font-size:16px;font-weight:800;align-items:center;justify-content:center;cursor:pointer;padding:0;opacity:.9}
+/* v50 compact cell editor */
+#cellModal .typeGrid{grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:3px;margin:2px 0}
+@media(max-width:640px){#cellModal .typeGrid{grid-template-columns:repeat(8,1fr);gap:3px}#cellModal .typeGrid button{font-size:9px;padding:3px 0}#cellModal .typeGrid button .ti{font-size:15px}}
+#cellModal .typeGrid button{padding:3px 1px;gap:0;font-size:9.5px;line-height:1.15;border-radius:10px;border-width:1.5px}
+#cellModal .typeGrid button .ti{font-size:14px;line-height:1.2}
+#cellModal .calcCard{padding:8px 10px;margin-top:4px}
+#cellModal .calcCard .cl{margin-bottom:3px}
+#cellModal .calcCard input{font-size:16px!important;padding:6px 10px}
+#cellModal .calcRes{margin-top:4px;font-size:13px}
+#cellModal .calcKeys{gap:5px;margin-top:6px}
+#cellModal .calcKeys button{padding:8px 0;font-size:16px;border-radius:12px}
+#cellModal .row2{gap:8px}
+#cellModal label{margin:4px 0 2px;font-size:12px}
+#cellModal .row2 input[type=color]{height:28px!important;border-radius:10px!important}
+#cellModal .btnsRow{padding:6px 0 8px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -578,6 +600,7 @@ th.rowh{background-image:var(--gV)!important}
 </div>
 
 <button id="hdrHandle" type="button">⌄ <span id="hdrHandleTx">القائمة</span></button>
+<button id="fsExitX" type="button" aria-label="Exit">✕</button>
 <div id="tableWrap"><table id="mainTable"></table></div>
 <button id="zoomChip" type="button" style="display:none;position:fixed;left:10px;bottom:64px;z-index:60;border:2px solid var(--onink);background:var(--ink);color:var(--onink);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)">100% ↺</button>
 
@@ -3679,15 +3702,19 @@ function renderTable(){
  afterRenderMedia();
  renderStatus();
 }
+var idbNameCache={};
+function idbShortName(n){return n.length>26?n.slice(0,12)+'\u2026'+n.slice(-12):n;}
 function afterRenderMedia(){
  /* real QR minis */
  var cvs=document.querySelectorAll('canvas.qrMini');
  for(var i=0;i<cvs.length;i++)qrDraw(cvs[i],cvs[i].getAttribute('data-qr')||'');
- /* idb images + file names */
+ /* idb images + file names: use cached values immediately (no layout jump), fetch only the first time */
  var imgs=document.querySelectorAll('img[data-idb]');
- for(var j=0;j<imgs.length;j++){(function(img){blobURL(img.getAttribute('data-idb')).then(function(u){if(u)img.src=u;});})(imgs[j]);}
+ for(var j=0;j<imgs.length;j++){(function(img){var id=img.getAttribute('data-idb');if(idbUrlCache[id]){img.src=idbUrlCache[id];return;}blobURL(id).then(function(u){if(u)img.src=u;});})(imgs[j]);}
  var names=document.querySelectorAll('[data-idb-name]');
- for(var k=0;k<names.length;k++){(function(el){var id=el.getAttribute('data-idb-name');if(!id)return;idb.get(id).then(function(rec){if(rec&&rec.name)el.textContent=rec.name.length>26?rec.name.slice(0,12)+'…'+rec.name.slice(-12):rec.name;el.title=rec.name;});})(names[k]);}
+ for(var k=0;k<names.length;k++){(function(el){var id=el.getAttribute('data-idb-name');if(!id)return;
+  if(idbNameCache[id]){el.textContent=idbShortName(idbNameCache[id]);el.title=idbNameCache[id];return;}
+  idb.get(id).then(function(rec){if(rec&&rec.name){idbNameCache[id]=rec.name;el.textContent=idbShortName(rec.name);el.title=rec.name;}});})(names[k]);}
 }
 function renderStatus(){
  var filled=0,imgs=0,files=0,auds=0,vis=0;
@@ -4236,34 +4263,57 @@ function addCols(n){
  for(var j=0;j<n;j++)S.colMeta.push(blankMeta());
  S.cols+=n;renderAll();
 }
+function cellHasData(c){return !!c&&c.v!==''&&c.v!==undefined&&c.v!==null;}
+function countRowData(r){var n=0;if(!S.data[r])return 0;for(var c=0;c<S.cols;c++)if(cellHasData(S.data[r][c]))n++;return n;}
+function countColData(c){var n=0;for(var r=0;r<S.rows;r++)if(cellHasData(S.data[r]&&S.data[r][c]))n++;return n;}
+function dataWarn(what,n){
+ return pL('تحذير: هتحذف بيانات ('+n+' '+(n===1?'خلية':'خلايا')+') موجودة في '+what[0]+'. تقدر ترجع عن الحذف بزر التراجع ↩ بعده. متأكد إنك عايز تكمل؟',
+  'Warning: you are about to delete data ('+n+' '+(n===1?'cell':'cells')+') in '+what[1]+'. You can undo with the Undo button afterwards. Continue?');
+}
 function setRowCount(n){
  n=Math.max(1,Math.min(MAXR,parseInt(n,10)||1));
  if(n===S.rows)return;
  if(n>S.rows)addRows(n-S.rows);
- else{pushHist();S.data=S.data.slice(0,n);S.rows=n;renderAll();}
+ else{
+  var cut=0;for(var r=n;r<S.rows;r++)cut+=countRowData(r);
+  var go=function(){pushHist();S.data=S.data.slice(0,n);S.rows=n;renderAll();};
+  if(cut>0){$('rowCount').value=S.rows;uiConfirm(dataWarn([(S.rows-n>1?'الصفوف الأخيرة ('+(S.rows-n)+')':'الصف الأخير'),(S.rows-n>1?'the last '+(S.rows-n)+' rows':'the last row')],cut),go,pL('حذف صفوف فيها بيانات','Delete rows with data'));}
+  else go();
+ }
 }
 function setColCount(n){
  n=Math.max(1,Math.min(MAXC,parseInt(n,10)||1));
  if(n===S.cols)return;
  if(n>S.cols)addCols(n-S.cols);
- else{pushHist();for(var r=0;r<S.rows;r++)S.data[r]=S.data[r].slice(0,n);S.colMeta=S.colMeta.slice(0,n);S.cols=n;renderAll();}
+ else{
+  var cut=0;for(var c=n;c<S.cols;c++)cut+=countColData(c);
+  var go=function(){pushHist();for(var r=0;r<S.rows;r++)S.data[r]=S.data[r].slice(0,n);S.colMeta=S.colMeta.slice(0,n);S.cols=n;renderAll();};
+  if(cut>0){$('colCount').value=S.cols;uiConfirm(dataWarn([(S.cols-n>1?'الأعمدة الأخيرة ('+(S.cols-n)+')':'العمود الأخير'),(S.cols-n>1?'the last '+(S.cols-n)+' columns':'the last column')],cut),go,pL('حذف أعمدة فيها بيانات','Delete columns with data'));}
+  else go();
+ }
 }
 function delRow(r){
  if(r===undefined)r=SEL.r;
- if(S.rows<=1){uiConfirm(t('delRowsQ'),function(){pushHist();S.data=[S.data[0].map(function(){return blankCell();})];renderAll();});return;}
- uiConfirm(t('delRowQ'),function(){
+ var nd=countRowData(r);
+ var ttl=nd>0?pL('حذف صف فيه بيانات','Delete row with data'):undefined;
+ var qm=nd>0?dataWarn(['الصف '+(r+1),'row '+(r+1)],nd):null;
+ if(S.rows<=1){uiConfirm(qm||t('delRowsQ'),function(){pushHist();S.data=[S.data[0].map(function(){return blankCell();})];renderAll();},ttl);return;}
+ uiConfirm(qm||t('delRowQ'),function(){
   pushHist();S.data.splice(r,1);S.rows--;SEL.r=Math.min(SEL.r,S.rows-1);renderAll();
- });
+ },ttl);
 }
 function delCol(c){
  if(c===undefined)c=SEL.c;
- if(S.cols<=1){uiConfirm(t('delColsQ'),function(){pushHist();S.data=[S.data[0].map(function(){return blankCell();})];S.colMeta=[blankMeta()];renderAll();});return;}
- uiConfirm(t('delColQ'),function(){
+ var nd=countColData(c);
+ var ttl=nd>0?pL('حذف عمود فيه بيانات','Delete column with data'):undefined;
+ var qm=nd>0?dataWarn(['العمود '+(c+1),'column '+(c+1)],nd):null;
+ if(S.cols<=1){uiConfirm(qm||t('delColsQ'),function(){pushHist();S.data=[S.data[0].map(function(){return blankCell();})];S.colMeta=[blankMeta()];renderAll();},ttl);return;}
+ uiConfirm(qm||t('delColQ'),function(){
   pushHist();
   for(var r=0;r<S.rows;r++)S.data[r].splice(c,1);
   S.colMeta.splice(c,1);S.cols--;SEL.c=Math.min(SEL.c,S.cols-1);
   renderAll();
- });
+ },ttl);
 }
 function insertRow(at){
  if(S.rows>=MAXR){toast(t('limitMsg'),'warn');return;}
@@ -5793,18 +5843,26 @@ function wireAll(){
 var PKEY='say_table_projects_v1', PPFX='say_table_proj_';
 var PGLOBAL=['lang','theme','lock','trial','lastBackup','btnColor','accColor'];
 /* fullscreen toggle (corner cell) */
-function fsIs(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+function fsReal(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+function fsIs(){return document.body.classList.contains('gridFs');}
 var FS_IN='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 var FS_OUT='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 function fsUpd(){var b=document.getElementById('fsBtn');if(!b)return;b.innerHTML=fsIs()?FS_OUT:FS_IN;b.title=fsIs()?pL('خروج من ملء الشاشة','Exit fullscreen'):pL('ملء الشاشة','Fullscreen');}
 function fsToggle(){
+ var on=!fsIs();
+ document.body.classList.toggle('gridFs',on);
  var de=document.documentElement,rq=de.requestFullscreen||de.webkitRequestFullscreen;
- if(!rq){toast(pL('متصفحك لا يدعم ملء الشاشة. على الآيفون: مشاركة ثم إضافة إلى الشاشة الرئيسية','Fullscreen not supported here. On iPhone: Share, then Add to Home Screen'),'warn');return;}
  try{
-  if(fsIs()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
-  else{var p=rq.call(de);if(p&&p.catch)p.catch(function(){toast(pL('تعذر ملء الشاشة','Fullscreen failed'),'err');});}
- }catch(e){toast(pL('تعذر ملء الشاشة','Fullscreen failed'),'err');}
+  if(on){if(rq){var p=rq.call(de);if(p&&p.catch)p.catch(function(){});}}
+  else if(fsReal()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
+ }catch(e){}
+ fsUpd();
+ var w=document.getElementById('tableWrap');if(w)w.scrollTop=0;
 }
+document.addEventListener('fullscreenchange',function(){if(!fsReal()&&fsIs()){document.body.classList.remove('gridFs');fsUpd();}});
+document.addEventListener('webkitfullscreenchange',function(){if(!fsReal()&&fsIs()){document.body.classList.remove('gridFs');fsUpd();}});
+document.getElementById('fsExitX').addEventListener('click',fsToggle);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&fsIs()&&!document.querySelector('.overlay:not([hidden])'))fsToggle();});
 document.addEventListener('fullscreenchange',fsUpd);document.addEventListener('webkitfullscreenchange',fsUpd);
 function pL(a,e){return S.lang==='ar'?a:e;}
 function pid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
