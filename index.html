@@ -496,6 +496,13 @@ body.gridFs #fsExitX{display:flex;position:fixed;bottom:12px;left:12px;z-index:8
 #cellModal label{margin:4px 0 2px;font-size:12px}
 #cellModal .row2 input[type=color]{height:28px!important;border-radius:10px!important}
 #cellModal .btnsRow{padding:6px 0 8px;margin-top:4px}
+/* v51 totals styled like headers */
+td.colTot{background:var(--headBg);color:var(--headTx);font-weight:800;text-align:center;background-image:var(--gV)!important}
+tr.totalRow td{background:var(--headBg);color:var(--headTx);font-weight:800;background-image:var(--gH)!important}
+tr.totalRow td.colTot{text-align:center}
+th.colTotHead{color:var(--headTx)}
+/* v52 total toggles styled like top buttons */
+label.tglWrap{background:var(--headBg);color:var(--headTx);border:0;font-weight:800;background-image:var(--gH)!important;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 </style>
 </head>
 <body>
@@ -3615,7 +3622,7 @@ function renderTable(){
   th.draggable=true;th.setAttribute('data-col',c);
   th.appendChild(hd);tr.appendChild(th);
  }
- if(S.totalsColOn){var thTot=document.createElement('th');thTot.className='colTotHead';thTot.textContent='Σ';if(S.hdrColColor)thTot.style.background=hdrTint(S.hdrColColor);tr.appendChild(thTot);}
+ if(S.totalsColOn){var thTot=document.createElement('th');thTot.className='colTotHead';thTot.textContent='Σ';if(S.hdrColColor){var shT=hdrShade(S.hdrColColor,Math.max(0,visCols-1),visCols);thTot.style.background=shT.bg;thTot.style.color=shT.fg;}tr.appendChild(thTot);}
  var thAdd=document.createElement('th');thAdd.className='addCol';thAdd.textContent='+';thAdd.title='+';thAdd.id='inlineAddCol';if(S.hdrColColor){thAdd.style.background=hdrBase(S.hdrColColor);thAdd.style.color='#fff';}tr.appendChild(thAdd);
  thead.appendChild(tr);tbl.appendChild(thead);
  var tb=document.createElement('tbody');
@@ -3651,6 +3658,7 @@ function renderTable(){
   }
   if(S.totalsColOn){
    var tdc=document.createElement('td');tdc.className='colTot';
+   if(S.hdrRowColor){var shc2=hdrShade(S.hdrRowColor,r,S.rows);tdc.style.background=shc2.bg;tdc.style.color=shc2.fg;}
    var rvals=[];for(var rc=0;rc<S.cols;rc++){if(S.colMeta[rc].hidden)continue;var rnv=numericValue(S.data[r][rc],r,rc);if(rnv!==null)rvals.push(rnv);}
    if(rvals.length){var rsum=rvals.reduce(function(a,b){return a+b;},0);tdc.textContent=Math.round(rsum*100)/100;}
    tr.appendChild(tdc);
@@ -3670,10 +3678,12 @@ function renderTable(){
  /* totals row */
  if(S.totalsOn){
   var trt=document.createElement('tr');trt.className='totalRow';
+  var totVis=0,totVi=0;for(var tv=0;tv<S.cols;tv++)if(!S.colMeta[tv].hidden)totVis++;
   var tht=document.createElement('th');tht.className='rowh';tht.textContent='Σ';if(S.hdrRowColor){tht.style.background=hdrBase(S.hdrRowColor);tht.style.color='#fff';}trt.appendChild(tht);
   for(var c3=0;c3<S.cols;c3++){
    if(S.colMeta[c3].hidden)continue;
    var tdt=document.createElement('td');tdt.setAttribute('data-total',c3);
+   if(S.hdrColColor){var shc3=hdrShade(S.hdrColColor,totVi,totVis);tdt.style.background=shc3.bg;tdt.style.color=shc3.fg;}totVi++;
    var agg=S.totalsAgg[c3]||'sum';
    var vals=[];
    for(var r3=0;r3<S.rows;r3++){if(!rowVisible(r3))continue;var nv=numericValue(S.data[r3][c3],r3,c3);if(nv!==null)vals.push(nv);}
@@ -3692,6 +3702,7 @@ function renderTable(){
   }
   if(S.totalsColOn){
    var tdg=document.createElement('td');tdg.className='colTot';
+   if(S.hdrColColor){var shg=hdrShade(S.hdrColColor,Math.max(0,totVis-1),totVis);tdg.style.background=shg.bg;tdg.style.color=shg.fg;}
    var gvals=[];for(var gr=0;gr<S.rows;gr++){if(!rowVisible(gr))continue;for(var gc2=0;gc2<S.cols;gc2++){if(S.colMeta[gc2].hidden)continue;var gnv=numericValue(S.data[gr][gc2],gr,gc2);if(gnv!==null)gvals.push(gnv);}}
    if(gvals.length){var gsum=gvals.reduce(function(a,b){return a+b;},0);tdg.textContent=Math.round(gsum*100)/100;}
    trt.appendChild(tdg);
@@ -5767,6 +5778,11 @@ function setView(v){
  renderAll();
 }
 /* ============ master render ============ */
+function applyTotalToggleColors(){
+ var pr=[['totalsToggle',S.hdrColColor],['totalsColToggle',S.hdrRowColor]];
+ for(var i=0;i<pr.length;i++){var cb=$(pr[i][0]);var lb=cb&&cb.closest('label');if(!lb)continue;
+  if(pr[i][1]){lb.style.background=hdrBase(pr[i][1]);lb.style.color='#fff';}else{lb.style.background='';lb.style.color='';}}
+}
 function applyStepperColors(){
  var pairs=[['rowMinus','rowPlus',S.hdrRowColor],['colMinus','colPlus',S.hdrColColor]];
  for(var i=0;i<pairs.length;i++){
@@ -5780,6 +5796,7 @@ function renderAll(){
  commitHist();
  applyTheme();
  applyStepperColors();
+ applyTotalToggleColors();
  $('rowCount').value=S.rows;$('colCount').value=S.cols;
  var spl=$('sizePill');if(spl)spl.innerHTML='<span lang="en" dir="'+(S.lang==='ar'?'rtl':'ltr')+'" class="num" style="display:inline-flex;flex-direction:row;gap:3px;unicode-bidi:isolate"><span dir="ltr">'+S.rows+'</span><span dir="ltr">×</span><span dir="ltr">'+S.cols+'</span></span>';
  $('totalsToggle').checked=S.totalsOn;
