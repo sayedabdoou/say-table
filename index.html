@@ -437,7 +437,7 @@ th,td{min-width:90px;font-size:12.5px;padding:8px 9px}
 #hdrHandle{display:none}
 @media(max-width:640px){
  .titleRow .gearRow{order:1}
- .sizePill{display:none}
+ .sizePill{display:inline-block;padding:3px 9px}
  #appHeader{padding:3px 6px 0;gap:3px 5px}
  .brand{font-size:13.5px}
  .brand .pro{font-size:8px;padding:1px 6px}
@@ -15382,6 +15382,39 @@ function cmpPickEnd(){
  },true);
 });
 var _rtCp=renderTable;renderTable=function(){_rtCp.apply(this,arguments);try{cpMark();}catch(e){}};
+
+/* ---------- v68: size dialog (rows x columns) ---------- */
+function applyGridSize(nr,nc){
+ pushHist();
+ if(nr<S.rows){S.data=S.data.slice(0,nr);S.rows=nr;}
+ if(nc<S.cols){for(var r=0;r<S.rows;r++)S.data[r]=S.data[r].slice(0,nc);S.colMeta=S.colMeta.slice(0,nc);S.cols=nc;}
+ while(S.cols<nc){for(var r2=0;r2<S.rows;r2++)S.data[r2].push(blankCell());S.colMeta.push(blankMeta());S.cols++;}
+ while(S.rows<nr){addRowsSilent();}
+ SEL.r=Math.min(SEL.r,S.rows-1);SEL.r2=Math.min(SEL.r2,S.rows-1);SEL.c=Math.min(SEL.c,S.cols-1);SEL.c2=Math.min(SEL.c2,S.cols-1);
+ renderAll();
+}
+function openSizeDialog(){
+ openGen('<h3 style="margin:0 0 10px">'+LL('حجم الجدول','Table size')+'</h3>'
+  +'<div style="display:flex;gap:12px;flex-wrap:wrap"><label style="flex:1;min-width:110px;font-weight:700">'+LL('الصفوف','Rows')+'<input id="szR" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" dir="ltr" lang="en" autocomplete="off" value="'+S.rows+'" style="width:100%;margin-top:4px;text-align:center;font-size:18px"></label>'
+  +'<label style="flex:1;min-width:110px;font-weight:700">'+LL('الأعمدة','Columns')+'<input id="szC" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" dir="ltr" lang="en" autocomplete="off" value="'+S.cols+'" style="width:100%;margin-top:4px;text-align:center;font-size:18px"></label></div>'
+  +'<div id="szNote" style="font-size:12px;opacity:.75;margin:8px 0">'+LL('الحد الأقصى '+MAXR+' × '+MAXC+'. لو كتبت رقم أكبر هيتحول للحد الأقصى.','Max '+MAXR+' × '+MAXC+'. Larger values become the max.')+'</div>'
+  +'<div class="btnsRow"><button class="pill black" id="szGo" style="flex:1;justify-content:center">'+LL('تطبيق','Apply')+'</button><button class="pill white" id="szNo" style="flex:1;justify-content:center">'+LL('إلغاء','Cancel')+'</button></div>');
+ wireGenClose();
+ var rI=$('szR'),cI=$('szC');
+ [rI,cI].forEach(function(i){i.addEventListener('focus',function(){i.select();});i.addEventListener('input',function(){i.value=i.value.replace(/[^0-9\u0660-\u0669]/g,'').replace(/[\u0660-\u0669]/g,function(d){return String(d.charCodeAt(0)-1632);});});});
+ $('szNo').onclick=function(){$('genModal').hidden=true;};
+ $('szGo').onclick=function(){
+  var nr=Math.max(1,Math.min(MAXR,parseInt(rI.value,10)||1)),nc=Math.max(1,Math.min(MAXC,parseInt(cI.value,10)||1));
+  if(nr===S.rows&&nc===S.cols){$('genModal').hidden=true;return;}
+  var cut=0;
+  for(var r=0;r<S.rows;r++)for(var c=0;c<S.cols;c++)if((r>=nr||c>=nc)&&cellHasData(S.data[r][c]))cut++;
+  var go=function(){$('genModal').hidden=true;applyGridSize(nr,nc);};
+  if(cut>0){uiConfirm(pL('تحذير: تصغير الجدول لـ '+nr+'×'+nc+' هيحذف بيانات ('+cut+' '+(cut===1?'خلية':'خلايا')+'). تقدر ترجع بزر التراجع ↩ بعده. متأكد إنك عايز تكمل؟','Warning: resizing to '+nr+'×'+nc+' will delete data ('+cut+' '+(cut===1?'cell':'cells')+'). You can undo afterwards. Continue?'),go,pL('حذف بيانات','Delete data'));}
+  else go();
+ };
+ setTimeout(function(){try{rI.focus();rI.select();}catch(e){}},50);
+}
+(function(){var sp=document.getElementById('sizePill');if(sp){sp.style.cursor='pointer';sp.setAttribute('role','button');sp.onclick=openSizeDialog;}})();
 e66('tbScan').onclick=function(){openScanner('toolbar');};
 e66('tbCompare').onclick=function(){cmpPickStart();};
 function stopCam(){
