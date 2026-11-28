@@ -177,6 +177,8 @@ td a{color:var(--acc);font-weight:700}
 /* ---------- modals (bottom sheet on mobile) ---------- */
 .overlay{position:fixed;inset:0;background:rgba(10,12,10,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:14px}
 .overlay[hidden]{display:none!important}
+html.kbOn .overlay{inset:auto;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100dvh)}
+html.kbOn .overlay .modalCard,html.kbOn #cellModal .modalCard{max-height:calc(var(--vvh,100dvh) - 6px)}
 .modalCard{background:var(--card);width:min(96vw,540px);border-radius:24px;padding:18px;border:1px solid var(--border);max-height:92vh;overflow:auto;box-shadow:var(--shadow);animation:up .22s}
 .modalCard.wide{width:min(96vw,860px)}
 @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
@@ -15415,6 +15417,53 @@ function openSizeDialog(){
  setTimeout(function(){try{rI.focus();rI.select();}catch(e){}},50);
 }
 (function(){var sp=document.getElementById('sizePill');if(sp){sp.style.cursor='pointer';sp.setAttribute('role','button');sp.onclick=openSizeDialog;}})();
+(function(){
+ var SKIP={actCode:1,licCode:1,lockInput:1,ownInput:1,clPw:1,searchInput:1,oLabel:1,ceSelNew:1,hdrDate:1,ceDate:1};
+ var OK={text:1,url:1,number:1,tel:1,search:1,password:1,email:1,'':1};
+ var lastAct=0;
+ function okIn(el){return el&&el.tagName==='INPUT'&&OK[(el.getAttribute('type')||'').toLowerCase()]&&!el.readOnly&&!SKIP[el.id];}
+ function ins(box){return Array.prototype.filter.call(box.querySelectorAll('input'),function(i){return okIn(i)&&i.offsetParent!==null&&!(i.id&&SKIP[i.id]);});}
+ function boxOf(el){var g=document.getElementById('genCard'),gm=document.getElementById('genModal');if(g&&gm&&!gm.hidden&&g.contains(el))return g;return null;}
+ function act(el){
+  if(!okIn(el))return false;
+  var g=boxOf(el),btn=null;
+  if(g){
+   var l=ins(g),ix=l.indexOf(el);
+   if(ix>-1&&ix<l.length-1){l[ix+1].focus();return true;}
+   var ids=['szGo','fAdd','cAdd','fbGo','pwSetGo','formGo','oAdd'];
+   for(var i=0;i<ids.length&&!btn;i++)btn=g.querySelector('#'+ids[i]);
+  }else if(el.closest('#cellModal')){btn=document.getElementById('ceSave');}
+  if(btn){btn.click();return true;}
+  if(el.closest('#scanModal')||el.id.indexOf('hdr')===0||el.id==='rowCount'||el.id==='colCount'){el.blur();return true;}
+  return false;
+ }
+ function go(e,el){
+  if(e.defaultPrevented)return;
+  var now=Date.now();if(now-lastAct<500)return;
+  if(act(el)){lastAct=now;e.preventDefault();}
+ }
+ function isEnt(e){return e.key==='Enter'||e.code==='NumpadEnter'||e.keyCode===13||e.which===13;}
+ document.addEventListener('keydown',function(e){if(!isEnt(e)||e.isComposing&&e.keyCode!==13||e.shiftKey)return;go(e,e.target);});
+ document.addEventListener('keyup',function(e){if(!isEnt(e)||e.shiftKey)return;go(e,e.target);});
+ document.addEventListener('beforeinput',function(e){if((e.inputType==='insertLineBreak'||e.inputType==='insertParagraph')&&e.target&&e.target.tagName==='INPUT')go(e,e.target);},true);
+ document.addEventListener('input',function(e){var t=e.target;if(t&&t.tagName==='INPUT'&&(e.inputType==='insertLineBreak'||e.inputType==='insertParagraph')){t.value=t.value.replace(/[\r\n]+/g,'');}},true);
+ document.addEventListener('focusin',function(e){
+  var el=e.target;if(!okIn(el))return;
+  var box=boxOf(el)||el.closest('#cellModal');
+  if(box){var l=ins(box),ix=l.indexOf(el);el.setAttribute('enterkeyhint',(ix>-1&&ix<l.length-1)?'next':'done');}
+  var card=el.closest('.modalCard');
+  if(card)setTimeout(function(){try{el.scrollIntoView({block:'center'});}catch(x){}},320);
+ });
+ var vv=window.visualViewport,de=document.documentElement;
+ function kb(){
+  if(!vv)return;
+  var diff=window.innerHeight-vv.height-vv.offsetTop;
+  if(window.innerHeight-vv.height>120){
+   de.style.setProperty('--vvh',vv.height+'px');de.style.setProperty('--vvt',vv.offsetTop+'px');de.classList.add('kbOn');
+  }else{de.classList.remove('kbOn');de.style.removeProperty('--vvh');de.style.removeProperty('--vvt');}
+ }
+ if(vv){vv.addEventListener('resize',kb);vv.addEventListener('scroll',kb);}
+})();
 e66('tbScan').onclick=function(){openScanner('toolbar');};
 e66('tbCompare').onclick=function(){cmpPickStart();};
 function stopCam(){
