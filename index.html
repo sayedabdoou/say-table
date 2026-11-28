@@ -558,6 +558,15 @@ tr.totalRow.totRowHid{height:18px}
 @media(pointer:coarse){#mainTable td[data-r],#mainTable th.rowh{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#mainTable img{-webkit-touch-callout:none;-webkit-user-drag:none}}
 th[data-col].dragOver{outline:3px solid var(--acc);outline-offset:-3px}.kbLane.dragOver{outline:3px dashed var(--acc)}
 .modal#genModal,#genModal{z-index:450!important}
+
+#cpBar{display:none;position:fixed;left:8px;right:8px;bottom:56px;z-index:260;background:#0f3d24;color:#fff;border-radius:16px;padding:10px 12px;box-shadow:0 6px 24px #0007}
+#cpBar .cpMsg{font-size:13px;margin-bottom:8px;text-align:center}
+#cpBar .cpRow{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+#cpBar .cpN{font-weight:800;flex:1 1 auto;min-width:70px}
+#cpBar .pill{padding:8px 12px;justify-content:center}#cpBar #cpGo{background:#16a34a!important;color:#fff!important;font-weight:800;flex:1 1 100%;order:3;padding:11px}#cpBar #cpGo:disabled{opacity:.5}
+td.cmPicked{position:relative;outline:3px solid #16a34a!important;outline-offset:-3px;background-image:linear-gradient(#16a34a22,#16a34a22)}
+td.cmPicked::before{content:"✓";position:absolute;top:2px;inset-inline-start:2px;width:20px;height:20px;border-radius:50%;background:#16a34a;color:#fff;font-size:13px;line-height:20px;text-align:center;font-weight:900;z-index:5}
+body.cmPicking #mainTable td[data-r]{cursor:pointer}
 .scOv{position:fixed;inset:0;z-index:300;background:#0d110d;color:#fff;display:flex;justify-content:center}
 .scOv[hidden]{display:none!important}
 .scOv.light{background:#eef2ee;color:#12261a}
@@ -15057,11 +15066,12 @@ function cmpDefaultName(r,c,horizontal){
  if(!horizontal){for(var k=0;k<S.cols;k++){var x=S.data[r][k];if(x&&x.type==='text'&&x.v&&String(x.v).length<=30)return String(x.v);}}
  return colName(c)+(r+1);
 }
-function openCompare(){
- var r1=Math.min(SEL.r,SEL.r2),r2=Math.max(SEL.r,SEL.r2),c1=Math.min(SEL.c,SEL.c2),c2=Math.max(SEL.c,SEL.c2);
+function openCompareCells(list){
+ var rs=list.map(function(x){return x[0];}),cs=list.map(function(x){return x[1];});
+ var r1=Math.min.apply(null,rs),r2=Math.max.apply(null,rs),c1=Math.min.apply(null,cs),c2=Math.max.apply(null,cs);
  var jobs=[],skipped=0;
- for(var r=r1;r<=r2;r++)for(var c=c1;c<=c2;c++){
-  var cell=S.data[r][c];if(!cell||!cell.v)continue;
+ for(var li=0;li<list.length;li++){var r=list[li][0],c=list[li][1];
+  var cell=S.data[r]&&S.data[r][c];if(!cell||!cell.v)continue;
   if(cell.type==='image'||cell.type==='camera')jobs.push({r:r,c:c,cell:cell,from:'img'});
   else if(cell.type==='file'&&isIdbRef(cell.v))jobs.push({r:r,c:c,cell:cell,from:'file'});
   else skipped++;
@@ -15321,8 +15331,59 @@ document.addEventListener('click',function(e){
  e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
  var td=d.closest('td[data-r]');if(td)cellDownload(td);
 },true);
+
+/* ---------- compare: tap-to-pick selection mode (never moves cells) ---------- */
+var CP={on:false,set:{}};
+function cpIsOffer(cell){return !!(cell&&cell.v&&(cell.type==='image'||cell.type==='camera'||(cell.type==='file'&&isIdbRef(cell.v))));}
+function cpMark(){
+ var tb=document.getElementById('mainTable');if(!tb)return;
+ var tds=tb.querySelectorAll('td[data-r]');
+ for(var i=0;i<tds.length;i++){var k=tds[i].getAttribute('data-r')+','+tds[i].getAttribute('data-c');tds[i].classList.toggle('cmPicked',!!(CP.on&&CP.set[k]));}
+ var n=Object.keys(CP.set).length,bar=document.getElementById('cpBar');
+ if(bar){var l=bar.querySelector('.cpN');if(l)l.textContent=LL('محدد: ','Selected: ')+n;var g=bar.querySelector('#cpGo');if(g)g.disabled=n<2;}
+}
+function cmpPickStart(){
+ CP.on=true;CP.set={};
+ var r1=Math.min(SEL.r,SEL.r2),r2=Math.max(SEL.r,SEL.r2),c1=Math.min(SEL.c,SEL.c2),c2=Math.max(SEL.c,SEL.c2);
+ if(r1!==r2||c1!==c2){for(var r=r1;r<=r2;r++)for(var c=c1;c<=c2;c++)if(cpIsOffer(S.data[r]&&S.data[r][c]))CP.set[r+','+c]=1;}
+ document.body.classList.add('cmPicking');
+ var bar=document.getElementById('cpBar');
+ if(!bar){bar=document.createElement('div');bar.id='cpBar';
+  bar.innerHTML='<div class="cpMsg">'+LL('اضغط على الخلايا اللي فيها العروض (صور أو PDF) عشان تحددها ✓','Tap the offer cells (pictures or PDFs) to check them ✓')+'</div><div class="cpRow"><span class="cpN"></span><button type="button" class="pill white" id="cpAll">'+LL('تحديد الكل','All')+'</button><button type="button" class="pill white" id="cpCancel">'+LL('إلغاء','Cancel')+'</button><button type="button" class="pill black" id="cpGo">⚖ '+LL('تم / مقارنة','Done / Compare')+'</button></div>';
+  document.body.appendChild(bar);
+  bar.querySelector('#cpCancel').onclick=cmpPickEnd;
+  bar.querySelector('#cpAll').onclick=function(){CP.set={};for(var r=0;r<S.rows;r++)for(var c=0;c<S.cols;c++)if(cpIsOffer(S.data[r][c]))CP.set[r+','+c]=1;cpMark();};
+  bar.querySelector('#cpGo').onclick=function(){
+   var list=Object.keys(CP.set).map(function(k){var a=k.split(',');return [+a[0],+a[1]];}).sort(function(a,b){return a[0]-b[0]||a[1]-b[1];});
+   if(list.length<2){toast(LL('حدد خليتين على الأقل','Pick at least 2 cells'),'warn');return;}
+   cmpPickEnd();openCompareCells(list);
+  };
+ }
+ bar.style.display='block';cpMark();
+}
+function cmpPickEnd(){
+ CP.on=false;CP.set={};document.body.classList.remove('cmPicking');
+ var bar=document.getElementById('cpBar');if(bar)bar.style.display='none';cpMark();
+}
+['mousedown','mouseup','pointerdown','pointerup','touchstart','touchmove','touchend','dragstart','dblclick','contextmenu','click'].forEach(function(t){
+ window.addEventListener(t,function(e){
+  if(!CP.on)return;
+  var td=e.target&&e.target.closest&&e.target.closest('#mainTable td[data-r]');if(!td)return;
+  if(e.target.closest('.cellDl'))return;
+  e.stopPropagation();
+  if(t==='dragstart'||t==='dblclick'||t==='contextmenu'){e.preventDefault();return;}
+  if(t==='click'){
+   e.preventDefault();
+   var r=+td.getAttribute('data-r'),c=+td.getAttribute('data-c'),k=r+','+c;
+   if(!cpIsOffer(S.data[r]&&S.data[r][c])){toast(LL('الخلية دي مش صورة ولا PDF','This cell is not a picture or PDF'),'warn');return;}
+   if(CP.set[k])delete CP.set[k];else CP.set[k]=1;
+   cpMark();
+  }
+ },true);
+});
+var _rtCp=renderTable;renderTable=function(){_rtCp.apply(this,arguments);try{cpMark();}catch(e){}};
 e66('tbScan').onclick=function(){openScanner('toolbar');};
-e66('tbCompare').onclick=openCompare;
+e66('tbCompare').onclick=function(){cmpPickStart();};
 function stopCam(){
  qrStopScan();
  if(CE.camStream){CE.camStream.getTracks().forEach(function(tr){tr.stop();});CE.camStream=null;}
@@ -17662,7 +17723,7 @@ function openCornerMenu(anchor){
     uiConfirm(n===1?t('delCellQ'):LL('مسح '+n+' خلية؟ تقدر ترجع بزر التراجع.','Clear '+n+' cells? You can undo.'),doClear);
   }},
   '-',
-  {label:LL('مقارنة العروض المحددة','Compare selected offers'),icon:'⚖',fn:function(){openCompare();}},
+  {label:LL('مقارنة العروض المحددة','Compare selected offers'),icon:'⚖',fn:function(){cmpPickStart();}},
   {label:LL('مسح مستند بالكاميرا','Scan a document'),icon:'📷',fn:function(){openScanner('toolbar');}},
   '-',
   {label:LL('ملاءمة كل الخلايا للمحتوى','Fit all cells to content'),icon:'📏',fn:fitAllCells}
